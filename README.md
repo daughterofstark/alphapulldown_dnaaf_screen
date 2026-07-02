@@ -54,7 +54,7 @@ environment/           environment and container specifications
 
 ## Roadmap
 
-See [ROADMAP.md](ROADMAP.md) for milestones. The first implementation milestones are target-manifest design, UniProt retrieval, metadata validation, and control-pair pipeline validation.
+See [ROADMAP.md](ROADMAP.md) for milestones. The immediate priority is AlphaPulldown installation, pipeline characterization, output documentation, and a small control-pair validation benchmark before finalizing the complete biological target universe.
 
 ## Scientific Status
 
@@ -67,4 +67,3 @@ Citation metadata is provided in [CITATION.cff](CITATION.cff) with placeholder p
 ## License
 
 No final open-source license has been chosen yet. See [LICENSE](LICENSE) for the current placeholder. Choose a license before public distribution.
-
