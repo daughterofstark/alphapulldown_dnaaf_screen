@@ -8,7 +8,11 @@ This project requires curated metadata for DNAAF, ODA, and IFT proteins before a
 
 ### Target Protein Manifest
 
-Authoritative source: `data/manifest/targets.yaml`.
+Authoritative seed source: `data/manifest/target_seed.json`.
+
+The original `data/manifest/targets.yaml` remains as a placeholder for a future
+hand-reviewed YAML manifest. The current retrieval workflow uses JSON because it
+can be parsed with the Python standard library on a clean local Mac.
 
 Each record must include:
 
@@ -66,6 +70,19 @@ Rules:
 - Header metadata should include gene, species, UniProt accession, isoform, and sequence checksum.
 - FASTA files must be generated from validated records only.
 
+### Verified UniProt Summary
+
+Storage: `data/processed/uniprot/`.
+
+Generated files:
+
+- `TARGET_VERIFICATION_REPORT.md`: human-readable verification report with UniProt links.
+- `targets_uniprot_verified.tsv`: tabular accession, gene, length, HGNC, PubMed, and checksum summary.
+- `uniprot_release_metadata.json`: UniProt release headers and retrieval timestamp.
+
+Raw UniProt JSON records are intentionally ignored by Git because they include
+full downloaded entries and can be regenerated from the manifest.
+
 ## Initial Target Universe
 
 ### DNAAF Targets
@@ -112,9 +129,12 @@ Initial IFT-A genes:
 
 Initial IFT-B genes:
 
-- IFT172, IFT88, IFT81, IFT80, IFT74, IFT57, IFT56, IFT54, IFT52, IFT46, IFT38/CLUAP1, IFT27, IFT25, IFT22, IFT20.
+- IFT172, IFT88, IFT81, IFT80, IFT74, IFT70/TTC30A, IFT70/TTC30B, IFT57, IFT56, IFT54, IFT52, IFT46, IFT38/CLUAP1, IFT27, IFT25, IFT22, IFT20.
 
-Before implementation, confirm whether the intended IFT-B set has 15 or 16 human records and resolve duplicate listing of IFT57 in the survey-derived draft. The manifest validator should reject duplicate record identifiers.
+The initial verified manifest keeps both human IFT70 paralogs (`TTC30A` and
+`TTC30B`). Before full-scale screening, decide whether to include both paralogs
+or restrict the primary screen to one biologically justified representative.
+The survey-derived duplicate listing of IFT57 has been resolved.
 
 ## Validation Rules
 
@@ -139,4 +159,3 @@ Each record should eventually link to citation keys in `docs/references/` or a f
 - Orthologous evidence.
 - Structural prediction.
 - Curator inference.
-

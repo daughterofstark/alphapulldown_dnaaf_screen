@@ -46,6 +46,10 @@ results/**
 !results/.gitkeep
 data/processed/**
 !data/processed/.gitkeep
+!data/processed/uniprot/
+!data/processed/uniprot/*.tsv
+!data/processed/uniprot/*.md
+!data/processed/uniprot/*metadata.json
 data/raw/uniprot/**
 !data/raw/uniprot/.gitkeep
 data/raw/fasta/**
@@ -82,4 +86,3 @@ template_mmcif/
 *.html
 *.pdf
 !docs/**/*.pdf
-

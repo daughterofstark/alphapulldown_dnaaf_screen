@@ -1,0 +1,7 @@
+{
+  "Date": "Thu, 02 Jul 2026 08:05:01 GMT",
+  "X-UniProt-Release": "2026_02",
+  "X-UniProt-Release-Date": "10-June-2026",
+  "queried_at_utc": "2026-07-02T08:05:01.438367+00:00",
+  "url": "https://rest.uniprot.org/uniprotkb/search?query=*&size=0&format=json"
+}
