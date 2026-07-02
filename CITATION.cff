@@ -1,0 +1,18 @@
+cff-version: 1.2.0
+message: "If you use this project, please cite it using the metadata below. Placeholder metadata must be updated before public release."
+title: "AlphaPulldown DNAAF-ODA-IFT Screen"
+version: "0.0.0"
+date-released: 2026-07-02
+authors:
+  - family-names: "Sharma"
+    given-names: "Medha"
+repository-code: "https://github.com/PLACEHOLDER/alphapulldown-dnaaf-oda-ift-screen"
+license: "NOASSERTION"
+keywords:
+  - AlphaPulldown
+  - AlphaFold-Multimer
+  - cilia
+  - DNAAF
+  - outer dynein arm
+  - intraflagellar transport
+

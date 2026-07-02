@@ -1,0 +1,22 @@
+positive_controls:
+  - bait: HUMAN_DNAAF9
+    prey: HUMAN_IFT74
+    rationale: Known DNAAF9-Shulin interaction with IFT-B transport machinery.
+  - bait: HUMAN_DNAAF9
+    prey: HUMAN_IFT81
+    rationale: Known DNAAF9-Shulin interaction with IFT-B transport machinery.
+  - bait: HUMAN_DNAAF2
+    prey: HUMAN_DNAAF4
+    rationale: R2TP-like DNAAF co-chaperone interaction.
+  - bait: HUMAN_DNAI1
+    prey: HUMAN_DNAI2
+    rationale: ODA intermediate-chain dimer control.
+
+negative_controls:
+  - bait: HUMAN_DNAAF18
+    prey: HUMAN_IFT46
+    rationale: Chlamydomonas interaction appears not to be conserved in humans.
+  - bait: HUMAN_DNAAF7
+    prey: HUMAN_IFT43
+    rationale: Biologically low-priority same-species negative control candidate.
+

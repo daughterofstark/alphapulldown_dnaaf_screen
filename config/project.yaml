@@ -1,0 +1,12 @@
+project:
+  name: alphapulldown-dnaaf-oda-ift-screen
+  status: planning
+  primary_species: Homo sapiens
+  primary_taxon_id: 9606
+
+paths:
+  target_manifest: data/manifest/targets.yaml
+  raw_uniprot: data/raw/uniprot
+  processed: data/processed
+  results: results
+
