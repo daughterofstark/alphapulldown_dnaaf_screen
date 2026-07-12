@@ -28,6 +28,7 @@ def build_parser() -> argparse.ArgumentParser:
     )
     parser.add_argument("--verified-json", type=Path, default=DEFAULT_VERIFIED_JSON)
     parser.add_argument("--raw-dir", type=Path, default=DEFAULT_RAW_DIR)
+    parser.add_argument("--provenance-dir", type=Path, default=Path("data/processed/provenance"))
     subparsers = parser.add_subparsers(dest="command", required=True)
 
     validate = subparsers.add_parser("validate-targets", help="Validate verified UniProt targets.")
@@ -68,7 +69,7 @@ def validate_targets_command(args: argparse.Namespace) -> int:
     provenance = _provenance(args)
     for artifact in artifacts:
         provenance.add_artifact(artifact)
-    provenance.write(Path("data/processed/provenance/validate_targets.json"))
+    provenance.write(args.provenance_dir / "validate_targets.json")
     groups: dict[str, int] = {}
     for target in targets:
         groups[target.protein_group] = groups.get(target.protein_group, 0) + 1
@@ -82,7 +83,7 @@ def write_fastas_command(args: argparse.Namespace) -> int:
     provenance = _provenance(args)
     for artifact in artifacts:
         provenance.add_artifact(artifact)
-    provenance.write(Path("data/processed/provenance/write_fastas.json"))
+    provenance.write(args.provenance_dir / "write_fastas.json")
     print(f"wrote {len(artifacts)} FASTA artifacts to {args.output_dir}")
     return 0
 
@@ -97,7 +98,7 @@ def build_screens_command(args: argparse.Namespace) -> int:
     provenance = _provenance(args)
     for artifact in [screen_path, review_path]:
         provenance.add_artifact(artifact)
-    provenance.write(Path("data/processed/provenance/build_screens.json"))
+    provenance.write(args.provenance_dir / "build_screens.json")
     print(f"wrote screen definitions to {args.output_dir}")
     return 0
 
@@ -108,7 +109,7 @@ def prepare_alphapulldown_command(args: argparse.Namespace) -> int:
     provenance = _provenance(args)
     for artifact in artifacts:
         provenance.add_artifact(artifact)
-    provenance.write(Path("data/processed/provenance/prepare_alphapulldown.json"))
+    provenance.write(args.provenance_dir / "prepare_alphapulldown.json")
     print(f"wrote {len(artifacts)} AlphaPulldown input artifacts to {args.output_dir}")
     return 0
 

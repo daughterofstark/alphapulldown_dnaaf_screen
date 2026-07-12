@@ -211,6 +211,8 @@ class CpuPreparationTests(unittest.TestCase):
                     str(fixture.verified),
                     "--raw-dir",
                     str(fixture.raw_dir),
+                    "--provenance-dir",
+                    str(root / "provenance"),
                     "write-fastas",
                     "--output-dir",
                     str(root / "fasta"),
