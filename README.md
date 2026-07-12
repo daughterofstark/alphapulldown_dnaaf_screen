@@ -8,12 +8,15 @@ Axonemal dynein arms are assembled in the cytoplasm by DNAAFs and delivered into
 
 This repository is currently in the architecture and planning phase. It does not yet implement the scientific pipeline.
 
+The current implemented layer is CPU-side preparation only. It validates verified UniProt targets, writes deterministic FASTA files, builds AlphaPulldown-compatible input files, and records provenance. AlphaPulldown inference is intentionally deferred to a Linux host with NVIDIA CUDA.
+
 ## Planned Features
 
 - Curated target manifests for all 19 mammalian DNAAFs, ODA proteins, ODAD proteins, and IFT proteins.
 - Scripted UniProt retrieval and validation.
 - Reproducible FASTA generation.
 - AlphaPulldown-compatible pair generation.
+- CPU-side preparation CLI for target validation, FASTA generation, screen definitions, and AlphaPulldown input files.
 - Positive and negative control validation.
 - AlphaFold-Multimer prediction orchestration.
 - Score extraction for ipTM, pTM, ranking confidence, pLDDT, and PAE.
@@ -33,6 +36,15 @@ pre-commit install
 ```
 
 AlphaPulldown, AlphaFold databases, CUDA, and GPU environment setup will be documented before prediction workflows are implemented.
+
+CPU-side preparation commands:
+
+```bash
+PYTHONPATH=src python -m alphapulldown_dnaaf_screen.cli validate-targets
+PYTHONPATH=src python -m alphapulldown_dnaaf_screen.cli write-fastas
+PYTHONPATH=src python -m alphapulldown_dnaaf_screen.cli build-screens
+PYTHONPATH=src python -m alphapulldown_dnaaf_screen.cli prepare-alphapulldown
+```
 
 ## Directory Structure
 
@@ -54,7 +66,7 @@ environment/           environment and container specifications
 
 ## Roadmap
 
-See [ROADMAP.md](ROADMAP.md) for milestones. The immediate priority is AlphaPulldown installation, pipeline characterization, output documentation, and a small control-pair validation benchmark before finalizing the complete biological target universe.
+See [ROADMAP.md](ROADMAP.md) for milestones. The immediate local priority is CPU-side preparation and AlphaPulldown input characterization; AlphaPulldown installation, inference, and official-example execution are deferred to a Linux GPU environment.
 
 ## Scientific Status
 

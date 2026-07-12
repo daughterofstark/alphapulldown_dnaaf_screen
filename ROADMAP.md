@@ -32,7 +32,7 @@ Validation criteria:
 
 ## Milestone 1: AlphaPulldown Implementation and Pipeline Characterization
 
-Objective: install AlphaPulldown from source, validate that it can run in the intended environment, and deeply document how the pipeline works before using it for biological discovery.
+Objective: prepare everything that can be done reproducibly on local macOS, then install and validate AlphaPulldown on a future Linux GPU host. The local machine should not run AlphaFold/AlphaPulldown inference because it lacks NVIDIA CUDA support.
 
 This milestone treats AlphaPulldown itself as the first object of study. The output should be suitable for explaining the pipeline to a supervisor or lab audience with confidence.
 
@@ -43,6 +43,7 @@ Deliverables:
 - `ALPHAPULLDOWN_PIPELINE.md`: step-by-step description of feature generation, MSA generation, model invocation, prediction, ranking, and report generation.
 - `OUTPUT_REFERENCE.md`: annotated directory tree of every generated AlphaPulldown output file and what each file means.
 - `SCORING_GUIDE.md`: explanation of ipTM, pTM, pLDDT, ranking confidence, PAE, and which outputs are most useful for downstream biology.
+- CPU-side preparation layer that validates targets, writes canonical FASTA files, prepares AlphaPulldown input files, and records provenance.
 - Presentation-ready workflow diagram showing inputs, AlphaPulldown stages, AlphaFold-Multimer execution, outputs, and interpretation checkpoints.
 - Annotated example AlphaPulldown directory tree, even if initially generated from a tiny toy/example run rather than project proteins.
 - Notes on ChimeraX inspection workflow and which structural files should be opened first.
@@ -51,7 +52,7 @@ Deliverables:
 Dependencies:
 
 - Repository setup.
-- Access to a machine suitable for installation testing. Local Mac is acceptable for documentation, source inspection, configuration review, and non-GPU dry runs; GPU or cluster access is required for realistic AlphaFold-Multimer prediction.
+- Access to a machine suitable for installation testing. Local Mac is acceptable for CPU-side preparation, documentation, source inspection, configuration review, and non-GPU dry runs; Linux GPU or cluster access is required for AlphaFold-Multimer prediction.
 - AlphaPulldown source repository and official documentation.
 
 Risks:
@@ -67,7 +68,8 @@ Estimated effort:
 
 Validation criteria:
 
-- AlphaPulldown can be installed reproducibly from source or through a documented source-based workflow.
+- CPU-side inputs can be generated without AlphaPulldown, AlphaFold, CUDA, internet access, or external databases.
+- AlphaPulldown can be installed reproducibly from source or through a documented source-based workflow once Linux GPU access is available.
 - All major command-line entry points and options are documented.
 - Required databases and optional databases are distinguished.
 - The feature-generation workflow is explained well enough for a new developer to trace inputs to generated features.
@@ -381,4 +383,3 @@ Validation criteria:
 
 - A fresh clone can regenerate all non-GPU summary analyses from archived raw outputs.
 - GPU-derived outputs are archived with checksums, configuration, and provenance.
-
