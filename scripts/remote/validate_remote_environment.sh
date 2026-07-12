@@ -43,11 +43,24 @@ ok() { report "$1" "OK: $2"; }
 report "OS" "$(uname -srm)"
 report "Architecture" "$(uname -m)"
 
-if command -v mamba >/dev/null 2>&1; then ok "Mamba" "$(mamba --version | head -1)"
-else fail "Mamba" "not found"; fi
+HAS_ENV_MANAGER=0
+if command -v mamba >/dev/null 2>&1; then
+  ok "Mamba" "$(mamba --version | head -1)"
+  HAS_ENV_MANAGER=1
+else
+  report "Mamba" "not found"
+fi
 
-if command -v conda >/dev/null 2>&1; then ok "Conda" "$(conda --version)"
-else fail "Conda" "not found"; fi
+if command -v conda >/dev/null 2>&1; then
+  ok "Conda" "$(conda --version)"
+  HAS_ENV_MANAGER=1
+else
+  report "Conda" "not found"
+fi
+
+if [[ "${HAS_ENV_MANAGER}" == "0" ]]; then
+  fail "Conda/Mamba" "neither conda nor mamba found"
+fi
 
 if command -v python3 >/dev/null 2>&1; then ok "Python" "$(python3 --version)"
 else fail "Python" "python3 not found"; fi
@@ -85,6 +98,12 @@ for path_var in REMOTE_PROJECT_ROOT FASTA_DIR ALPHAPULLDOWN_INPUT_DIR FEATURE_DI
   fi
 done
 
+if [[ -f "${AP_WORKFLOW_DIR:-}/workflow/Snakefile" ]]; then ok "Workflow Snakefile" "${AP_WORKFLOW_DIR}/workflow/Snakefile"
+else fail "Workflow Snakefile" "missing: ${AP_WORKFLOW_DIR:-unset}/workflow/Snakefile"; fi
+
+if [[ -d "${SNAKEMAKE_PROFILE:-}" ]]; then ok "Desktop profile" "${SNAKEMAKE_PROFILE}"
+else fail "Desktop profile" "missing: ${SNAKEMAKE_PROFILE:-unset}"; fi
+
 if [[ -f "${FASTA_MANIFEST:-}" ]]; then ok "FASTA manifest" "${FASTA_MANIFEST}"
 else fail "FASTA manifest" "missing: ${FASTA_MANIFEST:-unset}"; fi
 
@@ -94,4 +113,3 @@ if [[ "${FAILURES}" -gt 0 ]]; then
 fi
 
 echo "Remote environment validation passed."
-

@@ -45,25 +45,32 @@ ensure_dir "${COLLECT_DIR}"
 
 echo "Collecting selected outputs from ${OUTPUT_DIR} to ${COLLECT_DIR}"
 PATTERNS=(
-  "*.csv"
-  "*.tsv"
-  "*.json"
-  "ranked_*.pdb"
-  "ranked_*.cif"
-  "ranked_*.mmcif"
-  "pae*.png"
-  "pae*.json"
-  "ranking_debug.json"
-  "*.log"
+  "reports/all_interfaces.csv"
+  "skipped_folds.tsv"
+  "predictions/*/interfaces.csv"
+  "predictions/*/ranked_*.pdb"
+  "predictions/*/ranking_debug.json"
+  "predictions/*/pae_*.json"
+  "predictions/*/pae_plot_ranked_*.png"
+  "predictions/*/confidence_*.json"
+  "predictions/*/timings.json"
 )
 
 for pattern in "${PATTERNS[@]}"; do
   if [[ "${DRY_RUN}" == "1" ]]; then
-    echo "DRY RUN: find ${OUTPUT_DIR} -name ${pattern}"
+    echo "DRY RUN: find ${OUTPUT_DIR} -path ${OUTPUT_DIR}/${pattern}"
   else
-    find "${OUTPUT_DIR}" -name "${pattern}" -type f -exec cp --parents {} "${COLLECT_DIR}" \;
+    find "${OUTPUT_DIR}" -path "${OUTPUT_DIR}/${pattern}" -type f -exec cp --parents {} "${COLLECT_DIR}" \;
   fi
 done
+
+if [[ "${COLLECT_RESULT_PICKLES:-0}" == "1" ]]; then
+  if [[ "${DRY_RUN}" == "1" ]]; then
+    echo "DRY RUN: find ${OUTPUT_DIR} -path ${OUTPUT_DIR}/predictions/*/result_*.pkl*"
+  else
+    find "${OUTPUT_DIR}" -path "${OUTPUT_DIR}/predictions/*/result_*.pkl*" -type f -exec cp --parents {} "${COLLECT_DIR}" \;
+  fi
+fi
 
 if [[ -d "${LOG_DIR}" && "${DRY_RUN}" != "1" ]]; then
   mkdir -p "${COLLECT_DIR}/logs"
@@ -76,4 +83,3 @@ if [[ -d "${PROVENANCE_DIR}" && "${DRY_RUN}" != "1" ]]; then
 fi
 
 echo "Collection directory: ${COLLECT_DIR}"
-

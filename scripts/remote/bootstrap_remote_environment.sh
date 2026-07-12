@@ -63,7 +63,7 @@ else
 fi
 
 AP_SNAKEMAKE_VERSION="${AP_SNAKEMAKE_VERSION:-2.5.0}"
-CONDA_ENV_NAME="${CONDA_ENV_NAME:-alphapulldown}"
+CONDA_ENV_NAME="${CONDA_ENV_NAME:-snake}"
 AP_WORKFLOW_DIR="${AP_WORKFLOW_DIR:?AP_WORKFLOW_DIR must be set}"
 PROVENANCE_DIR="${PROVENANCE_DIR:?PROVENANCE_DIR must be set}"
 RUN_ID="bootstrap-$(date -u +%Y%m%dT%H%M%SZ)"
@@ -105,4 +105,3 @@ fi
 } > "${BOOTSTRAP_PROVENANCE}/bootstrap_versions.txt"
 
 echo "Bootstrap provenance: ${BOOTSTRAP_PROVENANCE}"
-

@@ -8,6 +8,7 @@ from pathlib import Path
 from unittest import mock
 
 from alphapulldown_dnaaf_screen.remote import (
+    UPSTREAM_CONFIG_KEYS,
     create_run_provenance,
     feature_generation_command,
     load_remote_config,
@@ -16,6 +17,8 @@ from alphapulldown_dnaaf_screen.remote import (
     prediction_command,
     require_linux,
     stable_run_id,
+    write_resolved_feature_config,
+    write_resolved_prediction_config,
 )
 from alphapulldown_dnaaf_screen.validation import ValidationError
 
@@ -53,6 +56,16 @@ def write_fixture(root: Path) -> Path:
         "HUMAN_IFT70A\tQ86WT1\n"
         "HUMAN_IFT70B\tQ8N4P2\n"
     )
+    for record_id in [
+        "HUMAN_DNAAF9",
+        "HUMAN_DNAAF18",
+        "HUMAN_IFT74",
+        "HUMAN_IFT81",
+        "HUMAN_IFT46",
+        "HUMAN_IFT70A",
+        "HUMAN_IFT70B",
+    ]:
+        (fasta / f"{record_id}.fasta").write_text(f">{record_id}|TEST|{record_id}\nMA\n")
     (config / "feature_generation.example.yaml").write_text("stage: feature_generation\n")
     (config / "prediction.example.yaml").write_text("stage: prediction\n")
     env = config / "paths.env"
@@ -61,7 +74,7 @@ def write_fixture(root: Path) -> Path:
             [
                 f"REMOTE_PROJECT_ROOT={root}",
                 "AP_WORKFLOW_DIR=${REMOTE_PROJECT_ROOT}/workflow",
-                "CONDA_ENV_NAME=alphapulldown",
+                "CONDA_ENV_NAME=snake",
                 "AP_SNAKEMAKE_VERSION=2.5.0",
                 "FEATURE_CONFIG=${REMOTE_PROJECT_ROOT}/config/remote/"
                 "feature_generation.example.yaml",
@@ -75,8 +88,9 @@ def write_fixture(root: Path) -> Path:
                 "TMP_DIR=${REMOTE_PROJECT_ROOT}/results/tmp",
                 "PROVENANCE_DIR=${REMOTE_PROJECT_ROOT}/results/provenance",
                 "DATABASES_DIR=${REMOTE_PROJECT_ROOT}/databases",
+                "BACKEND_WEIGHTS_DIR=${REMOTE_PROJECT_ROOT}/weights",
                 "FEATURE_MODE=localdb",
-                "FEATURE_FILE_PATTERN={record_id}.pkl",
+                "FEATURE_FILE_PATTERN={record_id}_af3_input.json",
                 "SNAKEMAKE_CORES=4",
                 "",
             ]
@@ -112,7 +126,9 @@ class RemoteHandoffTests(unittest.TestCase):
             command = feature_generation_command(config, dry_run=True)
             self.assertIn("snakemake", command[0])
             self.assertIn("--dry-run", command)
-            self.assertIn(f"feature_dir={tmp}/results/features", command)
+            self.assertNotIn("--config", command)
+            self.assertIn("--snakefile", command)
+            self.assertIn("--directory", command)
 
     def test_feature_coverage_validation(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
@@ -121,7 +137,9 @@ class RemoteHandoffTests(unittest.TestCase):
             missing = missing_features(config, "controls")
             self.assertEqual(len(missing), 4)
             for record_id in ["HUMAN_DNAAF9", "HUMAN_DNAAF18", "HUMAN_IFT74", "HUMAN_IFT46"]:
-                (root / "results" / "features" / f"{record_id}.pkl").write_text("feature")
+                (root / "results" / "features" / f"{record_id}_af3_input.json").write_text(
+                    "feature"
+                )
             self.assertEqual(missing_features(config, "controls"), [])
 
     def test_prediction_command_requires_no_full_screen(self) -> None:
@@ -134,8 +152,67 @@ class RemoteHandoffTests(unittest.TestCase):
         with tempfile.TemporaryDirectory() as tmp:
             config = load_remote_config(write_fixture(Path(tmp)))
             command = prediction_command(config, screen="controls", dry_run=True)
-            self.assertIn("screen=controls", command)
+            self.assertNotIn("--config", command)
             self.assertIn("--dry-run", command)
+
+    def test_resolved_feature_config_uses_upstream_keys(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            config = load_remote_config(write_fixture(Path(tmp)))
+            path, inputs = write_resolved_feature_config(config, run_id="feature-test")
+            self.assertTrue(inputs.exists())
+            self.assertIn(f"{tmp}/data/processed/fasta/HUMAN_DNAAF9.fasta", inputs.read_text())
+            keys = top_level_keys(path)
+            self.assertLessEqual(keys, UPSTREAM_CONFIG_KEYS)
+            text = path.read_text()
+            self.assertIn("only_generate_features: true", text)
+            self.assertIn("--data_pipeline: \"alphafold3\"", text)
+
+    def test_mmseqs2_mode_uses_alphafold2_pipeline(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            env = write_fixture(Path(tmp))
+            text = env.read_text()
+            text = text.replace("FEATURE_MODE=localdb", "FEATURE_MODE=mmseqs2")
+            text = text.replace("FEATURE_FILE_PATTERN={record_id}_af3_input.json\n", "")
+            env.write_text(text)
+            config = load_remote_config(env)
+            self.assertEqual(config.feature_pattern, "{record_id}.pkl.xz")
+            path, _ = write_resolved_feature_config(config, run_id="feature-mmseqs2")
+            resolved = path.read_text()
+            self.assertIn("--data_pipeline: \"alphafold2\"", resolved)
+            self.assertIn("--use_mmseqs2: true", resolved)
+            self.assertIn("docker://kosinskilab/alphafold2:2.5.0", resolved)
+
+    def test_prediction_inputs_are_fasta_paths_for_feature_reuse(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            config = load_remote_config(write_fixture(Path(tmp)))
+            path, inputs = write_resolved_prediction_config(
+                config, screen="controls", run_id="prediction-test"
+            )
+            self.assertTrue(path.exists())
+            self.assertEqual(len(inputs), 1)
+            text = inputs[0].read_text()
+            self.assertIn("HUMAN_DNAAF9.fasta+", text)
+            self.assertIn("+", text)
+            self.assertNotIn("Q5TEA3+Q96LB3", text)
+
+    def test_project_local_keys_not_passed_directly_to_snakemake(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            config = load_remote_config(write_fixture(Path(tmp)))
+            feature = feature_generation_command(config, dry_run=True)
+            prediction = prediction_command(config, screen="controls", dry_run=True)
+            forbidden = {"screen=controls", "feature_dir=", "fasta_dir=", "feature_mode="}
+            joined = " ".join(feature + prediction)
+            for token in forbidden:
+                self.assertNotIn(token, joined)
+
+    def test_template_project_local_keys_are_namespaced(self) -> None:
+        for path in [
+            Path("config/remote/feature_generation.example.yaml"),
+            Path("config/remote/prediction.example.yaml"),
+        ]:
+            keys = top_level_keys(path)
+            self.assertIn("project_local", keys)
+            self.assertLessEqual(keys - {"project_local"}, UPSTREAM_CONFIG_KEYS)
 
     def test_no_local_execution_on_macos(self) -> None:
         with mock.patch.object(platform, "system", return_value="Darwin"):
@@ -169,6 +246,15 @@ class RemoteHandoffTests(unittest.TestCase):
             text = (root / path).read_text(encoding="utf-8")
             for token in forbidden:
                 self.assertNotIn(token, text, f"{path} contains hardcoded path token {token}")
+
+def top_level_keys(path: Path) -> set[str]:
+    keys: set[str] = set()
+    for raw_line in path.read_text(encoding="utf-8").splitlines():
+        if not raw_line or raw_line.startswith("#") or raw_line.startswith(" "):
+            continue
+        if ":" in raw_line:
+            keys.add(raw_line.split(":", 1)[0])
+    return keys
 
 
 if __name__ == "__main__":
