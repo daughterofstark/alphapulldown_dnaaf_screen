@@ -46,6 +46,17 @@ PYTHONPATH=src python -m alphapulldown_dnaaf_screen.cli build-screens
 PYTHONPATH=src python -m alphapulldown_dnaaf_screen.cli prepare-alphapulldown
 ```
 
+Remote Linux handoff commands:
+
+```bash
+cp config/remote/paths.example.env config/remote/paths.env
+bash scripts/remote/validate_remote_environment.sh
+bash scripts/remote/run_feature_generation.sh --dry-run
+bash scripts/remote/run_prediction.sh --screen controls --dry-run
+```
+
+See [docs/software/REMOTE_EXECUTION_GUIDE.md](docs/software/REMOTE_EXECUTION_GUIDE.md).
+
 ## Directory Structure
 
 ```text

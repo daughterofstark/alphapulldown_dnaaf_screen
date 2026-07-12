@@ -40,3 +40,23 @@ Next steps:
 - Review generated CPU-side artifacts.
 - Commit this as a CPU-preparation milestone.
 - On Linux GPU access, use `config/alphapulldown.example.yaml` as the starting point for machine-specific AlphaPulldown execution.
+
+Task: Implement remote-execution handoff layer.
+
+Result:
+
+- Added strict remote shell scripts for environment bootstrap, validation, feature generation, prediction, and result collection.
+- Added remote configuration templates for paths, feature generation, and prediction.
+- Added Python helpers for remote config parsing, command construction, feature coverage checks, full-screen deferral, and provenance creation.
+- Added documentation for remote execution, feature generation, GPU inference, and data transfer.
+- Added offline tests for remote handoff behavior without AlphaPulldown, Snakemake, CUDA, internet, or GPU dependencies.
+
+Issues:
+
+- Scripts are designed for Linux remote execution and intentionally reject local macOS execution.
+- Actual Snakemake rule names and workflow-specific output names must be confirmed on the Linux host after deploying the pinned AlphaPulldownSnakemake workflow.
+
+Next steps:
+
+- Push branch to GitHub.
+- On Linux GPU host, copy `config/remote/paths.example.env` to `config/remote/paths.env`, edit paths, validate environment, then dry-run feature generation.
