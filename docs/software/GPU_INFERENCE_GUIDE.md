@@ -19,11 +19,13 @@ bash scripts/remote/run_prediction.sh --screen controls --dry-run
 bash scripts/remote/run_prediction.sh --screen controls
 ```
 
-Control inputs are read from:
+Control definitions are read from:
 
 ```text
 data/processed/alphapulldown/control_sample_sheet.csv
 ```
+
+Before Snakemake is invoked, the wrapper rewrites those accession pairs to a run-local file containing absolute FASTA paths. This keeps prediction aligned with the verified FASTA-derived features.
 
 ## Targeted Transport Screen
 
@@ -57,29 +59,37 @@ bash scripts/remote/run_prediction.sh --screen controls --executor slurm
 
 SLURM settings are configured in `config/remote/paths.env`; no partition, account, or cluster path is hardcoded.
 
+## Upstream Invocation
+
+Desktop mode uses the deployed upstream profile:
+
+```bash
+snakemake --snakefile <AP_WORKFLOW_DIR>/workflow/Snakefile --directory <AP_WORKFLOW_DIR> --configfile <resolved-config> --profile <AP_WORKFLOW_DIR>/config/profiles/desktop --cores 8
+```
+
+SLURM mode follows the upstream executor style:
+
+```bash
+snakemake --snakefile <AP_WORKFLOW_DIR>/workflow/Snakefile --directory <AP_WORKFLOW_DIR> --configfile <resolved-config> --profile <AP_WORKFLOW_DIR>/config/profiles/slurm --executor slurm --jobs 200
+```
+
 ## Resume and Retry
 
-The configuration templates expose:
-
-- `skip_existing`
-- `restart_times`
-- model settings
-- seed settings
-- output paths
+Resume is handled by Snakemake's `rerun-incomplete` profile settings and by reusing the same output directory. Retry policy for SLURM is provided by Snakemake flags such as `--restart-times`; add it deliberately on the remote host after the first dry run if needed.
 
 Use dry runs after any resume/retry change.
 
 ## Expected Outputs
 
-Workflow-version-specific outputs may include:
+For AlphaPulldown/AlphaPulldownSnakemake `2.5.0`, expected outputs include:
 
-- ranked structures
-- PAE files
-- ranking JSON
-- score tables
-- logs
-- provenance
-- selected result pickles
+- `predictions/<fold>/ranked_*.pdb`
+- `predictions/<fold>/ranking_debug.json`
+- `predictions/<fold>/pae_*.json`
+- `predictions/<fold>/pae_plot_ranked_*.png`
+- `predictions/<fold>/confidence_*.json`
+- `predictions/<fold>/interfaces.csv`
+- `reports/all_interfaces.csv` when recursive reporting is enabled
+- `predictions/<fold>/result_*.pkl*` only when selected result pickles are needed
 
 Collect only lightweight outputs needed for local analysis.
-

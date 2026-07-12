@@ -60,3 +60,27 @@ Next steps:
 
 - Push branch to GitHub.
 - On Linux GPU host, copy `config/remote/paths.example.env` to `config/remote/paths.env`, edit paths, validate environment, then dry-run feature generation.
+
+Task: Audit remote handoff against pinned upstream AlphaPulldown and AlphaPulldownSnakemake `2.5.0`.
+
+Result:
+
+- Inspected pinned upstream source and documentation for AlphaPulldown commit `1c99b15ce3fef42374c24a5bd83ce8241117d5f6` and AlphaPulldownSnakemake commit `23cbba5f151f843d800b5cffaa7a3a3908c35d9e`.
+- Corrected remote command construction to run the deployed upstream Snakefile from `AP_WORKFLOW_DIR` with upstream profile paths.
+- Replaced project-local Snakemake config overrides with resolved upstream config files written under `results/provenance/<run_id>/`.
+- Corrected feature-only execution to use `only_generate_features: true`.
+- Corrected feature naming assumptions to AF3 `{record_id}_af3_input.json` by default and AF2/MMseqs2 `{record_id}.pkl.xz`.
+- Corrected prediction wiring so accession screen definitions are rewritten to absolute verified FASTA paths before Snakemake execution.
+- Corrected MMseqs2 mode to use the AlphaFold2 data pipeline/backend because AlphaPulldown `2.5.0` rejects `--use_mmseqs2` with `--data_pipeline alphafold3`.
+- Added `docs/validation/UPSTREAM_COMPATIBILITY_AUDIT.md`.
+
+Issues:
+
+- Local `pytest` executable is not installed; validation used `python3 -m unittest`.
+- AF3 container-specific structure filenames beyond source-verified AF2 `ranked_*.pdb` must be confirmed during a real remote dry run/execution.
+- Cluster-specific Singularity/Apptainer bind paths and retry settings remain remote-environment decisions.
+
+Next steps:
+
+- Commit the compatibility audit and remote wrapper corrections.
+- On Linux, deploy the pinned workflow, validate the environment, and run the wrapper dry runs before any real feature generation or inference.

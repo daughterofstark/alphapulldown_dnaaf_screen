@@ -6,12 +6,22 @@ AlphaPulldown separates per-protein feature generation from pairwise structure p
 
 Computing features once per protein prevents repeated MSA/template work when the same protein appears in many pairwise screens.
 
+For `KosinskiLab/AlphaPulldownSnakemake` tag `2.5.0`, feature-only execution is exposed by the upstream config key:
+
+```yaml
+only_generate_features: true
+```
+
+The Snakefile then targets the required feature files and does not run `run_structure_prediction.py`.
+
 ## Inputs
 
 - Canonical FASTA files from `data/processed/fasta/`.
 - FASTA manifest from `data/processed/fasta/fasta_manifest.tsv`.
 - Remote configuration from `config/remote/paths.env`.
 - Feature-generation template from `config/remote/feature_generation.example.yaml`.
+
+The remote helper writes a resolved `feature_inputs.txt` containing absolute paths to the verified FASTA files. This prevents the workflow from downloading UniProt sequences during this stage.
 
 ## Modes
 
@@ -29,6 +39,8 @@ This mode should be preferred on a well-provisioned cluster because it avoids de
 
 Use this when local AlphaFold databases are unavailable and the selected AlphaPulldown workflow supports `--use_mmseqs2`.
 
+Pinned AlphaPulldown `2.5.0` rejects `--use_mmseqs2` with `--data_pipeline alphafold3`. Therefore this project resolves MMseqs2 mode to the AlphaFold2 data pipeline/backend and expects compressed AF2 feature pickles unless overridden after a real remote dry run.
+
 Requirements:
 
 - Do not overwrite existing MSAs silently.
@@ -38,13 +50,19 @@ Requirements:
 
 ## Expected Outputs
 
-The exact file names are workflow-version dependent. The project uses a configurable feature pattern:
+For the default local-database AlphaFold3 mode in AlphaPulldownSnakemake `2.5.0`, generated individual feature files are expected under:
 
 ```text
-FEATURE_FILE_PATTERN="{record_id}.pkl"
+<output_directory>/features/{record_id}_af3_input.json
 ```
 
-Adjust this in `config/remote/paths.env` if the deployed workflow writes a different feature filename.
+For AlphaFold2/MMseqs2 mode with compressed features, the expected pattern is:
+
+```text
+<output_directory>/features/{record_id}.pkl.xz
+```
+
+Adjust `FEATURE_FILE_PATTERN` in `config/remote/paths.env` only after confirming the deployed workflow output.
 
 ## Dry Run
 
@@ -62,4 +80,3 @@ Dry run validates paths and prints the Snakemake command without starting featur
 - FASTA manifest out of sync with FASTA directory.
 - Insufficient temporary storage.
 - Workflow version changes feature output naming.
-

@@ -43,12 +43,16 @@ rsync -av <remote-host>:/path/to/alphapulldown/results/collected/ results/remote
 
 Transfer only:
 
-- score tables
-- PAE files
-- ranked structures
+- `reports/all_interfaces.csv`
+- `predictions/<fold>/interfaces.csv`
+- `predictions/<fold>/ranked_*.pdb`
+- `predictions/<fold>/ranking_debug.json`
+- `predictions/<fold>/pae_*.json`
+- `predictions/<fold>/pae_plot_ranked_*.png`
+- `predictions/<fold>/confidence_*.json`
 - logs
 - provenance
-- selected result pickles when needed
+- `result_*.pkl*` only when explicitly needed
 
 ## Reproducibility Notes
 
@@ -61,4 +65,3 @@ Always record:
 - AlphaPulldown/Snakemake versions.
 - CUDA/GPU details.
 - Input checksums.
-

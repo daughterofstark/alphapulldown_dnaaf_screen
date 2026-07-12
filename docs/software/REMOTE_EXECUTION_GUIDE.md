@@ -42,6 +42,13 @@ bash scripts/remote/bootstrap_remote_environment.sh --dry-run
 bash scripts/remote/bootstrap_remote_environment.sh
 ```
 
+The bootstrap script follows the pinned upstream command:
+
+```bash
+conda env create -n snake -f https://raw.githubusercontent.com/KosinskiLab/AlphaPulldownSnakemake/2.5.0/workflow/envs/alphapulldown.yaml
+snakedeploy deploy-workflow https://github.com/KosinskiLab/AlphaPulldownSnakemake <AP_WORKFLOW_DIR> --tag 2.5.0
+```
+
 Validate:
 
 ```bash
@@ -94,3 +101,8 @@ results/provenance/<run_id>/
 
 Each run captures command text, Git state, input checksums, config locations, timestamps, and workflow settings.
 
+## Upstream Compatibility Notes
+
+The remote helpers materialize resolved AlphaPulldownSnakemake config files under `results/provenance/<run_id>/` before invoking Snakemake. This avoids passing project-local keys such as `screen` or `feature_mode` to upstream Snakemake. Feature generation is selected with the verified upstream key `only_generate_features: true`.
+
+Prediction inputs are rewritten from accession lists to absolute FASTA paths so the workflow consumes the verified repository FASTAs and reuses feature files named from the stable `HUMAN_*` FASTA basenames.
