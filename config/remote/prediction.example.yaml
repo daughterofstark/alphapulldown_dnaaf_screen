@@ -1,0 +1,53 @@
+# Example prediction configuration for remote Linux + NVIDIA GPU execution.
+# This file is a template. Keep machine-specific paths in paths.env.
+
+stage: prediction
+workflow: AlphaPulldownSnakemake
+pinned_workflow_version: "2.5.0"
+
+inputs:
+  controls: "${ALPHAPULLDOWN_INPUT_DIR}/control_sample_sheet.csv"
+  transport_baits: "${ALPHAPULLDOWN_INPUT_DIR}/transport_baits.txt"
+  transport_preys: "${ALPHAPULLDOWN_INPUT_DIR}/ift_b_preys.txt"
+  full_screen_pairs: "${ALPHAPULLDOWN_INPUT_DIR}/full_screen_pairs.tsv"
+  feature_directory: "${FEATURE_DIR}"
+
+outputs:
+  prediction_directory: "${OUTPUT_DIR}"
+  logs: "${LOG_DIR}"
+  provenance: "${PROVENANCE_DIR}"
+
+execution_order:
+  first: controls
+  second: transport
+  deferred: full
+
+model:
+  backend: alphafold_multimer
+  model_preset: multimer
+  num_recycles: 3
+  num_predictions_per_model: 1
+  random_seed: null
+  regenerate_msas: false
+
+gpu:
+  required: true
+  platform: linux_nvidia_cuda
+  fail_if_no_nvidia_smi: true
+
+resume_retry:
+  skip_existing: true
+  restart_times: 3
+
+snakemake:
+  desktop_cores: "${SNAKEMAKE_CORES}"
+  slurm_jobs: "${SNAKEMAKE_JOBS}"
+  desktop_profile: "${SNAKEMAKE_PROFILE}"
+  slurm_profile: "${SLURM_PROFILE}"
+
+provenance:
+  capture_model_settings: true
+  capture_input_checksums: true
+  capture_git_state: true
+  capture_cuda_and_gpu: true
+

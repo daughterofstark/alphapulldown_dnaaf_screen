@@ -1,0 +1,44 @@
+# Example feature-generation configuration for remote Linux execution.
+# This file is a template. Keep machine-specific paths in paths.env.
+
+stage: feature_generation
+workflow: AlphaPulldownSnakemake
+pinned_workflow_version: "2.5.0"
+
+inputs:
+  fasta_directory: "${FASTA_DIR}"
+  fasta_manifest: "${FASTA_MANIFEST}"
+
+outputs:
+  feature_directory: "${FEATURE_DIR}"
+  logs: "${LOG_DIR}"
+  temporary_directory: "${TMP_DIR}"
+
+mode:
+  backend: "localdb"  # localdb or mmseqs2
+  use_mmseqs2: false
+  skip_existing: true
+  reuse_precomputed_msas: true
+  overwrite_existing_msas: false
+  use_templates: true
+  organism_pairing: "workflow_default"
+
+local_database_mode:
+  databases_directory: "${DATABASES_DIR}"
+  require_databases_directory: true
+
+remote_mmseqs2_mode:
+  use_mmseqs2: true
+  require_databases_directory: false
+  preserve_msa_logs: true
+
+snakemake:
+  dry_run_flag: "--dry-run"
+  cores: "${SNAKEMAKE_CORES}"
+  profile: "${SNAKEMAKE_PROFILE}"
+
+provenance:
+  output_directory: "${PROVENANCE_DIR}"
+  capture_input_checksums: true
+  capture_git_state: true
+
