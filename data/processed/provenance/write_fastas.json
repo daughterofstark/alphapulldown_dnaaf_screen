@@ -1,0 +1,135 @@
+{
+  "artifacts": [
+    {
+      "path": "/var/folders/48/bypl6cnn0lg2qgcnb5ywtt3r0000gn/T/tmpdrielxgj/fasta/HUMAN_DNAAF18.fasta",
+      "sha256": "79593e78b75b418ae630ff132b3e487854165f1ec890412e272c425491b880c5"
+    },
+    {
+      "path": "/var/folders/48/bypl6cnn0lg2qgcnb5ywtt3r0000gn/T/tmpdrielxgj/fasta/HUMAN_DNAAF2.fasta",
+      "sha256": "3ab3ea422cbebfd6187ca541dc105a73332797f14f59d2058b26982804bc3a45"
+    },
+    {
+      "path": "/var/folders/48/bypl6cnn0lg2qgcnb5ywtt3r0000gn/T/tmpdrielxgj/fasta/HUMAN_DNAAF4.fasta",
+      "sha256": "0515b1499cf4f0aeb974ecd74b75c4d7a5aea2a75f58be445ce4e1c99a8e0de9"
+    },
+    {
+      "path": "/var/folders/48/bypl6cnn0lg2qgcnb5ywtt3r0000gn/T/tmpdrielxgj/fasta/HUMAN_DNAAF9.fasta",
+      "sha256": "c2b46568fc5294ff6bfe583287e0205cc246bcd74e15b2164648221516b5ce12"
+    },
+    {
+      "path": "/var/folders/48/bypl6cnn0lg2qgcnb5ywtt3r0000gn/T/tmpdrielxgj/fasta/HUMAN_DNAH5.fasta",
+      "sha256": "8baa15eb4b1db07927ac9f84f59a20efa9e43562df3634f25d9dc896e3134b3b"
+    },
+    {
+      "path": "/var/folders/48/bypl6cnn0lg2qgcnb5ywtt3r0000gn/T/tmpdrielxgj/fasta/HUMAN_DNAI1.fasta",
+      "sha256": "cd0e4d57a6dabede3b34e88ef42e98753d33a8509b306ccf0a68e9b28733c04e"
+    },
+    {
+      "path": "/var/folders/48/bypl6cnn0lg2qgcnb5ywtt3r0000gn/T/tmpdrielxgj/fasta/HUMAN_DNAI2.fasta",
+      "sha256": "3e629b6b027a40f96d5ae3a0324865fd9cb1fc589f70b803b120174aa34bd92e"
+    },
+    {
+      "path": "/var/folders/48/bypl6cnn0lg2qgcnb5ywtt3r0000gn/T/tmpdrielxgj/fasta/HUMAN_IFT43.fasta",
+      "sha256": "6432e88895c06678af5f00914a1543aeef20b09f3de0204895137e4950cbc905"
+    },
+    {
+      "path": "/var/folders/48/bypl6cnn0lg2qgcnb5ywtt3r0000gn/T/tmpdrielxgj/fasta/HUMAN_IFT46.fasta",
+      "sha256": "9a46afe31fc8688b3d344d95e9553140264eacf565f9731f110020ec24d07192"
+    },
+    {
+      "path": "/var/folders/48/bypl6cnn0lg2qgcnb5ywtt3r0000gn/T/tmpdrielxgj/fasta/HUMAN_IFT70A.fasta",
+      "sha256": "5bb3cc2c8876fa7ef2109cf53b3f484a35f8e68f543c9876fd886d1cadc54180"
+    },
+    {
+      "path": "/var/folders/48/bypl6cnn0lg2qgcnb5ywtt3r0000gn/T/tmpdrielxgj/fasta/HUMAN_IFT70B.fasta",
+      "sha256": "d7bb3931ddc4486cafa2cd6527b71703516365daaca5d3ce8a50366ae93edd91"
+    },
+    {
+      "path": "/var/folders/48/bypl6cnn0lg2qgcnb5ywtt3r0000gn/T/tmpdrielxgj/fasta/HUMAN_IFT74.fasta",
+      "sha256": "fe0a8877160c6f4471ad6b69950689ef1d6602b84bdf492c3163498faf013205"
+    },
+    {
+      "path": "/var/folders/48/bypl6cnn0lg2qgcnb5ywtt3r0000gn/T/tmpdrielxgj/fasta/HUMAN_IFT81.fasta",
+      "sha256": "25bdab6ceb825d4bdbcbc9de2a42d371c0bc864659965c00da404e3facda47af"
+    },
+    {
+      "path": "/var/folders/48/bypl6cnn0lg2qgcnb5ywtt3r0000gn/T/tmpdrielxgj/fasta/HUMAN_ODAD1.fasta",
+      "sha256": "53e2885be2998083d8530ec21888bdbec17a8aab1e65c756c798f2055dac300f"
+    },
+    {
+      "path": "/var/folders/48/bypl6cnn0lg2qgcnb5ywtt3r0000gn/T/tmpdrielxgj/fasta/fasta_manifest.tsv",
+      "sha256": "c6d12191343e3213bac3f22bbb30b2cd3dce9c0ec57ba280b79b059d67b5466e"
+    }
+  ],
+  "command": "write-fastas",
+  "config": null,
+  "git": {
+    "branch": "feature/alphapulldown-implementation",
+    "commit": "24c9ac03c8b512f5ea465312442a60ff874c5a44",
+    "dirty": true
+  },
+  "inputs": [
+    {
+      "path": "/var/folders/48/bypl6cnn0lg2qgcnb5ywtt3r0000gn/T/tmpdrielxgj/targets.json",
+      "sha256": "4f88263f6b0bba03bdae8f3dffd9663e5f1388d885ec1d336501f491dba46780"
+    },
+    {
+      "path": "/var/folders/48/bypl6cnn0lg2qgcnb5ywtt3r0000gn/T/tmpdrielxgj/raw/HUMAN_DNAAF18.json",
+      "sha256": "536ef26f48036b555f8b75278777633491b10b37bd1fc113c95d976d667e8d4d"
+    },
+    {
+      "path": "/var/folders/48/bypl6cnn0lg2qgcnb5ywtt3r0000gn/T/tmpdrielxgj/raw/HUMAN_DNAAF2.json",
+      "sha256": "d749f65ed995ef927181f79628dbd6a04c258b3996ef58f2fb0a28202d1ce64b"
+    },
+    {
+      "path": "/var/folders/48/bypl6cnn0lg2qgcnb5ywtt3r0000gn/T/tmpdrielxgj/raw/HUMAN_DNAAF4.json",
+      "sha256": "5b0fc47bb674575fffea7e6087a8da3f3101e9f281db715f38d22b362c727716"
+    },
+    {
+      "path": "/var/folders/48/bypl6cnn0lg2qgcnb5ywtt3r0000gn/T/tmpdrielxgj/raw/HUMAN_DNAAF9.json",
+      "sha256": "790441261f8d5fd5462fbb371c78dbfe90d42525c911d1bab9fdffc5db1bf2a3"
+    },
+    {
+      "path": "/var/folders/48/bypl6cnn0lg2qgcnb5ywtt3r0000gn/T/tmpdrielxgj/raw/HUMAN_DNAH5.json",
+      "sha256": "91ee1d8eb1337cb4b794d5ae72572661e671cdccde758472ce7d046223e4576b"
+    },
+    {
+      "path": "/var/folders/48/bypl6cnn0lg2qgcnb5ywtt3r0000gn/T/tmpdrielxgj/raw/HUMAN_DNAI1.json",
+      "sha256": "7587a2df3e77534a26e6f68ad01b2f97c1a773e9b7238c0bf4eb3f9820cf3e23"
+    },
+    {
+      "path": "/var/folders/48/bypl6cnn0lg2qgcnb5ywtt3r0000gn/T/tmpdrielxgj/raw/HUMAN_DNAI2.json",
+      "sha256": "236baf0360d7e0cc1a4938135aa43e8cebff8861995a2bbafa4d10f1fa9f5b3f"
+    },
+    {
+      "path": "/var/folders/48/bypl6cnn0lg2qgcnb5ywtt3r0000gn/T/tmpdrielxgj/raw/HUMAN_IFT43.json",
+      "sha256": "06fc68fd8cae8d17be9f4910bba8868d5238f3c19860cb15bd8d87f3b3ed9c63"
+    },
+    {
+      "path": "/var/folders/48/bypl6cnn0lg2qgcnb5ywtt3r0000gn/T/tmpdrielxgj/raw/HUMAN_IFT46.json",
+      "sha256": "1c5fd9e84e93c17c88492f63813ebbc37f5fbba762800a2d20106d83b2c45167"
+    },
+    {
+      "path": "/var/folders/48/bypl6cnn0lg2qgcnb5ywtt3r0000gn/T/tmpdrielxgj/raw/HUMAN_IFT70A.json",
+      "sha256": "ed2ebcbe697083bcb907c20584a9b3780bbc414bd180149ad39b3faeeb6e32dd"
+    },
+    {
+      "path": "/var/folders/48/bypl6cnn0lg2qgcnb5ywtt3r0000gn/T/tmpdrielxgj/raw/HUMAN_IFT70B.json",
+      "sha256": "f0cc2a902ef1f797775ce35d1cd5b93a5375baab4d63927ac2b7071363a90db0"
+    },
+    {
+      "path": "/var/folders/48/bypl6cnn0lg2qgcnb5ywtt3r0000gn/T/tmpdrielxgj/raw/HUMAN_IFT74.json",
+      "sha256": "caa3aacba3c0c08e184dcd91bd51df842f8621724c3d57dd494e4b7b80ab564d"
+    },
+    {
+      "path": "/var/folders/48/bypl6cnn0lg2qgcnb5ywtt3r0000gn/T/tmpdrielxgj/raw/HUMAN_IFT81.json",
+      "sha256": "de2fa52a3efd354729791ee0fa1f50e24ce1e4466169efe03352bb178b052970"
+    },
+    {
+      "path": "/var/folders/48/bypl6cnn0lg2qgcnb5ywtt3r0000gn/T/tmpdrielxgj/raw/HUMAN_ODAD1.json",
+      "sha256": "46c01f31ecc5de65a82af0537a0961fd7bced985eb2a8b22e1c3bfb64148fac1"
+    }
+  ],
+  "package_version": "0.0.0",
+  "utc_timestamp": "2026-07-12T18:48:26.337092+00:00"
+}

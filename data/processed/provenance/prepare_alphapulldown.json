@@ -1,0 +1,295 @@
+{
+  "artifacts": [
+    {
+      "path": "data/processed/alphapulldown/control_sample_sheet.csv",
+      "sha256": "20b0e5f9509629297c9ee9f2309d8c9ee9d094b5b469522a5d32a6824d355a29"
+    },
+    {
+      "path": "data/processed/alphapulldown/transport_baits.txt",
+      "sha256": "7fb56a3292858df50a87e6f8507dae3feb497e19726108b7b4bfb530acf9370a"
+    },
+    {
+      "path": "data/processed/alphapulldown/ift_b_preys.txt",
+      "sha256": "da583d25baa4df9811ea93e6e2fa96a00c92424fe0836a1c8ebb7bebf6d2a5a1"
+    },
+    {
+      "path": "data/processed/alphapulldown/control_pairs.tsv",
+      "sha256": "d5b96dc475b40d7df394a14e0d19f17d3360e742161b6ef63018dc47b7630aee"
+    },
+    {
+      "path": "data/processed/alphapulldown/transport_pairs.tsv",
+      "sha256": "099a4f9608a197a5df13f9097e38dc7bc7afa29cbf33bc4931bd838cbcbe6454"
+    },
+    {
+      "path": "data/processed/alphapulldown/full_screen_pairs.tsv",
+      "sha256": "d4b8c5e25075cc53a2b28433a2fc42b33bf2e164bf720527987338a60a40353f"
+    },
+    {
+      "path": "data/processed/alphapulldown/README.md",
+      "sha256": "214a39c7712a2ce451372a9b77f13d67f425b01e58b9fd8801f1af7eff85b92a"
+    }
+  ],
+  "command": "prepare-alphapulldown",
+  "config": null,
+  "git": {
+    "branch": "feature/alphapulldown-implementation",
+    "commit": "24c9ac03c8b512f5ea465312442a60ff874c5a44",
+    "dirty": true
+  },
+  "inputs": [
+    {
+      "path": "data/processed/uniprot/targets_uniprot_verified.json",
+      "sha256": "8e38e7af687d9d69320eafb598915e4b679604c4e19a5acfd795f77faade668d"
+    },
+    {
+      "path": "data/raw/uniprot/HUMAN_DNAAF1.json",
+      "sha256": "c7235262048e9d4a90d814cb37560f6384899d148a22a39b0b5a8394ba1652bd"
+    },
+    {
+      "path": "data/raw/uniprot/HUMAN_DNAAF10.json",
+      "sha256": "395cafa94e7b340e4a6b3c2496f6eb74b1d9aa9e442f3ebb7482a387fe4a9a74"
+    },
+    {
+      "path": "data/raw/uniprot/HUMAN_DNAAF11.json",
+      "sha256": "3fb1378147536772ceef878804a0a356159cc951fab0281c134d552ecbb0fd20"
+    },
+    {
+      "path": "data/raw/uniprot/HUMAN_DNAAF12.json",
+      "sha256": "8b046fd7d93a9120d3219af5e5d9f82b55567ef3ad6446b03e4e92219a75dba8"
+    },
+    {
+      "path": "data/raw/uniprot/HUMAN_DNAAF13.json",
+      "sha256": "432491595c3b86f9911cc88fcfb0015b7e7ec29cf73b46b525d8dca2e85713c0"
+    },
+    {
+      "path": "data/raw/uniprot/HUMAN_DNAAF14.json",
+      "sha256": "c6be75dcd111912f73057446d2b3d450aaed4079c37c6fff39f487fb6abdc752"
+    },
+    {
+      "path": "data/raw/uniprot/HUMAN_DNAAF15.json",
+      "sha256": "1a959364854bc6964c6441e63741c2a42906681ff96995a0dd017cd1961f1772"
+    },
+    {
+      "path": "data/raw/uniprot/HUMAN_DNAAF16.json",
+      "sha256": "8c3ec88788d75252af0a4cceca0f9a15342ea0b25261671ec20587457589d343"
+    },
+    {
+      "path": "data/raw/uniprot/HUMAN_DNAAF17.json",
+      "sha256": "7dce937cb58935b39ce07b32745a9325f0c989340ed1227666ee44cafb82d3e8"
+    },
+    {
+      "path": "data/raw/uniprot/HUMAN_DNAAF18.json",
+      "sha256": "d95ae8b259eec14cef2bad28d8c237896a0152180ec24736a4f91511723b5e02"
+    },
+    {
+      "path": "data/raw/uniprot/HUMAN_DNAAF19.json",
+      "sha256": "e310575308cdfb9fed5cc9fbcd52a1f1bc2b3d7e8c7398a7a8f4760dff1e3b71"
+    },
+    {
+      "path": "data/raw/uniprot/HUMAN_DNAAF2.json",
+      "sha256": "b90180a2de1cb63fd20474ab3138a6eed92b62705ddc3de5f6fef1e2a893fddf"
+    },
+    {
+      "path": "data/raw/uniprot/HUMAN_DNAAF3.json",
+      "sha256": "f667878e51b8372b5aa9c48d61f1d14c8dabd54a03ccacece2db321ff130b1a0"
+    },
+    {
+      "path": "data/raw/uniprot/HUMAN_DNAAF4.json",
+      "sha256": "29cadc0f1db140eba736b2582c7b6804617829494ac172dac1c578f5434f29ca"
+    },
+    {
+      "path": "data/raw/uniprot/HUMAN_DNAAF5.json",
+      "sha256": "f86c6036e36edd23d6f5abc1197e2854a34ad3a83216a4da5dcb1a8160c5ac18"
+    },
+    {
+      "path": "data/raw/uniprot/HUMAN_DNAAF6.json",
+      "sha256": "8f5b845875bbbcffabf4a7e6278bd64ed5ffcfe114a02b20d3838057f102ef06"
+    },
+    {
+      "path": "data/raw/uniprot/HUMAN_DNAAF7.json",
+      "sha256": "c96e9d8520d301ca6d93f018c55fefd7e81c35e5e41925145879ec6f21c7260f"
+    },
+    {
+      "path": "data/raw/uniprot/HUMAN_DNAAF8.json",
+      "sha256": "a672b1d649227381530541f62b89d3bb55421733851c2d0d10fbab805551c595"
+    },
+    {
+      "path": "data/raw/uniprot/HUMAN_DNAAF9.json",
+      "sha256": "044b83a6c1e44c6edb6378693919235acb3d7cd1057797b51e7af5ea1804dab1"
+    },
+    {
+      "path": "data/raw/uniprot/HUMAN_DNAH11.json",
+      "sha256": "4ee825d326b77779d719df726f24e01d18728ab7ea8de914aeda50aec8a48610"
+    },
+    {
+      "path": "data/raw/uniprot/HUMAN_DNAH17.json",
+      "sha256": "30348f1377bf0a929d70fa2711cd95fbf85139c99ec94cfbbf217ff9d4a74300"
+    },
+    {
+      "path": "data/raw/uniprot/HUMAN_DNAH5.json",
+      "sha256": "98f6dcf4e2607db727e3412e76de523e79d7f8e887aafbc46a25d446c3d5bab8"
+    },
+    {
+      "path": "data/raw/uniprot/HUMAN_DNAH8.json",
+      "sha256": "54a44d0d12c295e31c4726a6619284f428f7cc67b1c88fbdf72615e1939b1036"
+    },
+    {
+      "path": "data/raw/uniprot/HUMAN_DNAH9.json",
+      "sha256": "7f1d9607f84b53212cb427942898a74d5f8eb6445b4e490cbcc433be955e479e"
+    },
+    {
+      "path": "data/raw/uniprot/HUMAN_DNAI1.json",
+      "sha256": "8fcd43e9459aa51cad1f16bae9a8a13c8292868b4a2fa36e5fff4914c18283d2"
+    },
+    {
+      "path": "data/raw/uniprot/HUMAN_DNAI2.json",
+      "sha256": "fe6a45c54afd535fd84d8acac445ced18327ea0632fbc503a7a4bd09746f4e09"
+    },
+    {
+      "path": "data/raw/uniprot/HUMAN_DNAL1.json",
+      "sha256": "5ed8c3e3456fb08cb1e39e4b6d219de0b6648044495712eb9abd8f2cade3bba0"
+    },
+    {
+      "path": "data/raw/uniprot/HUMAN_DNAL4.json",
+      "sha256": "6ee6d227b4b3a0955ebf7b202ea2952260bbd2e5ef4b511dc1e0f309cf29ad00"
+    },
+    {
+      "path": "data/raw/uniprot/HUMAN_DNALI1.json",
+      "sha256": "8ec4485d6f5c51c5796c00f02c9c992d994649235623155f75a6c957950059e3"
+    },
+    {
+      "path": "data/raw/uniprot/HUMAN_DYNLL1.json",
+      "sha256": "e36c27fbe32a74d80dfdd70c5bb23caa460a025fba73bfa986e04dadad633fd4"
+    },
+    {
+      "path": "data/raw/uniprot/HUMAN_DYNLL2.json",
+      "sha256": "7a7532c6ffeed14786356661856196f3e200fae836bd0741a1c86de90a7184a8"
+    },
+    {
+      "path": "data/raw/uniprot/HUMAN_DYNLRB1.json",
+      "sha256": "cdd39f35273f5827b7e623d66daf5e9b9782b12f49b33cecf7f9efdb762c2904"
+    },
+    {
+      "path": "data/raw/uniprot/HUMAN_DYNLRB2.json",
+      "sha256": "cd4bc9d3c19e2377ca2764062300558aa5fbe58ab11ea16a5d18cda4265591a9"
+    },
+    {
+      "path": "data/raw/uniprot/HUMAN_DYNLT1.json",
+      "sha256": "ffd67a0b9746b213aa60096dbb7dfec46fe31fd6cc0c07ce1c7902941e8c818d"
+    },
+    {
+      "path": "data/raw/uniprot/HUMAN_DYNLT3.json",
+      "sha256": "62db6b6252f460bdc9d89009485d99401c149727960a792565609e31e1792571"
+    },
+    {
+      "path": "data/raw/uniprot/HUMAN_IFT121.json",
+      "sha256": "c5ca2f58796b749cf318acf0856d57b3f7c75fd3ac003833f6662206691113f6"
+    },
+    {
+      "path": "data/raw/uniprot/HUMAN_IFT122.json",
+      "sha256": "13bc80e390691aa476e67ccc01b88abcbc3c45c07b66785b264c80a3a2367b96"
+    },
+    {
+      "path": "data/raw/uniprot/HUMAN_IFT139.json",
+      "sha256": "10ea1d2c70bbd6614328945ebf108d4ce464928fde955f88b4149302e3a0b08f"
+    },
+    {
+      "path": "data/raw/uniprot/HUMAN_IFT140.json",
+      "sha256": "f952d6de132e496bfb1448b27b96e1aa67b46fa4147160d7ecdcbfdfde07dde2"
+    },
+    {
+      "path": "data/raw/uniprot/HUMAN_IFT144.json",
+      "sha256": "80cb7769d2efbf4b4908a39007c56d2d56f24bca96daa8580d4ce56ea20bb74a"
+    },
+    {
+      "path": "data/raw/uniprot/HUMAN_IFT172.json",
+      "sha256": "8c5ab5b20ce62dda17731218fe61f3bf129b6d4e141e5d83c41918657e07335f"
+    },
+    {
+      "path": "data/raw/uniprot/HUMAN_IFT20.json",
+      "sha256": "5883d6de4298b33a0c8d293a766fc5866c7aeca28dc442b40de16dee67343dcf"
+    },
+    {
+      "path": "data/raw/uniprot/HUMAN_IFT22.json",
+      "sha256": "492f473d9364ef06eef601d435646b211fcc4e5b4178c4498116b5af1f7f9906"
+    },
+    {
+      "path": "data/raw/uniprot/HUMAN_IFT25.json",
+      "sha256": "9e782dd040f749c80108a4221ac1cb2252118a98f08acdfe1f3266d3495761c3"
+    },
+    {
+      "path": "data/raw/uniprot/HUMAN_IFT27.json",
+      "sha256": "23c17eb180c6304d2c322aba0f38ce26fbd3d49f02185375af0674eaf0cc3ddd"
+    },
+    {
+      "path": "data/raw/uniprot/HUMAN_IFT38.json",
+      "sha256": "d9e9632bf546b6699d974141883bbbe24fde8492e81f0ae9aff2e6cf18deb210"
+    },
+    {
+      "path": "data/raw/uniprot/HUMAN_IFT43.json",
+      "sha256": "31ec74b9a67d4516d24f139e2903e5add3f0c2d1e1e810e2e7da20e9fc7394b3"
+    },
+    {
+      "path": "data/raw/uniprot/HUMAN_IFT46.json",
+      "sha256": "6c3b0bb10db937300fdc7c5439def132aa8789ae53e5669715e30eb219eb4179"
+    },
+    {
+      "path": "data/raw/uniprot/HUMAN_IFT52.json",
+      "sha256": "0143b6bac3d921f8283b2ad7b02ab8288ab53ab0ef5aca058922e6422b26cdca"
+    },
+    {
+      "path": "data/raw/uniprot/HUMAN_IFT54.json",
+      "sha256": "fa7fa6fb2d22e30740287b145e053f46f020f669568cbf4b2fbfcb49d5cfc201"
+    },
+    {
+      "path": "data/raw/uniprot/HUMAN_IFT56.json",
+      "sha256": "ace4de34667a7b5aeb82e8d73355a31b8cc7097919714703190af1d25cb66cd3"
+    },
+    {
+      "path": "data/raw/uniprot/HUMAN_IFT57.json",
+      "sha256": "b29ee8f4357b004dd7f7cb3aa12da6bed024b7f0fe6a9883596ea423782bd521"
+    },
+    {
+      "path": "data/raw/uniprot/HUMAN_IFT70A.json",
+      "sha256": "14981e6a0042bff9cd3070bd89f504b2f415a10055e3f9a0b81bbc3d496af962"
+    },
+    {
+      "path": "data/raw/uniprot/HUMAN_IFT70B.json",
+      "sha256": "df572eaa39a181e8f14a6ed00bb5b7a6dbfeacd0a8a2339e909e7db7dfdb6236"
+    },
+    {
+      "path": "data/raw/uniprot/HUMAN_IFT74.json",
+      "sha256": "bfe9bb0f7816f60ae55d724643afd9a3e2666fa8164ae633d98aeb67e4a0c8d8"
+    },
+    {
+      "path": "data/raw/uniprot/HUMAN_IFT80.json",
+      "sha256": "c7e91b41b2bab5def980b704c827cdf4c268b7b1475c4c1acd6c7e2069f74b97"
+    },
+    {
+      "path": "data/raw/uniprot/HUMAN_IFT81.json",
+      "sha256": "0e4a9bcf13a71fb2f2c2c1561fe2d56bcc515d05f8f23c20dc41a4a3c86e8f55"
+    },
+    {
+      "path": "data/raw/uniprot/HUMAN_IFT88.json",
+      "sha256": "871c5bbf906555dcc1dbaf98f2f0caa5ad3e6e50d7eca0de963b846eccb3e816"
+    },
+    {
+      "path": "data/raw/uniprot/HUMAN_ODAD1.json",
+      "sha256": "10e96c5083203d99776d43b2fd5c136edc372d22eb99bd2ad8d8d8f8ddcfab9e"
+    },
+    {
+      "path": "data/raw/uniprot/HUMAN_ODAD2.json",
+      "sha256": "524816edfee4e1c2400801dc6d0b9cb76f07c7adccfef69ae1e47b092cd10ba4"
+    },
+    {
+      "path": "data/raw/uniprot/HUMAN_ODAD3.json",
+      "sha256": "afd34e347a8ab02da24bb49fceb723e54b64c5733e3b3965b5f07e4afb01aa25"
+    },
+    {
+      "path": "data/raw/uniprot/HUMAN_ODAD4.json",
+      "sha256": "c07c910d1f02836d456af2d85b2aa7e207cfb0a717c90292285e806c2ac07a2f"
+    }
+  ],
+  "package_version": "0.0.0",
+  "utc_timestamp": "2026-07-12T18:48:13.557191+00:00"
+}

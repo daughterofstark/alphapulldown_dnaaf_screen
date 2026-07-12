@@ -1,0 +1,6 @@
+record_id	display_name	accession	length	status	reason
+HUMAN_DNAH11	DNAH11	Q96DT5	4516	deferred_requires_construct_review	Full-length axonemal dynein heavy chain; no arbitrary truncation.
+HUMAN_DNAH17	DNAH17	Q9UFH2	4462	deferred_requires_construct_review	Full-length axonemal dynein heavy chain; no arbitrary truncation.
+HUMAN_DNAH5	DNAH5	Q8TE73	4624	deferred_requires_construct_review	Full-length axonemal dynein heavy chain; no arbitrary truncation.
+HUMAN_DNAH8	DNAH8	Q96JB1	4490	deferred_requires_construct_review	Full-length axonemal dynein heavy chain; no arbitrary truncation.
+HUMAN_DNAH9	DNAH9	Q9NYC9	4486	deferred_requires_construct_review	Full-length axonemal dynein heavy chain; no arbitrary truncation.
