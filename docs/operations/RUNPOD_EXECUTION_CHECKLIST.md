@@ -48,6 +48,32 @@ cd alphapulldown
 git checkout feature/alphapulldown-implementation
 ```
 
+## Resume an Existing RunPod Session
+
+Use this when the pod already has Miniforge under `/workspace/miniforge3`, a
+`snakedeploy-tools` environment, and the project clone at `/workspace/alphapulldown`.
+These commands are validation/dry-run commands only and do not start AlphaPulldown
+feature generation or inference:
+
+```bash
+export PATH="/workspace/miniforge3/bin:$PATH"
+cd /workspace/alphapulldown
+conda activate snakedeploy-tools
+git status --short --branch
+bash scripts/remote/bootstrap_remote_environment.sh --dry-run
+bash scripts/remote/validate_remote_environment.sh
+bash scripts/remote/run_feature_generation.sh --dry-run
+```
+
+Expected architecture:
+
+- `snakedeploy-tools` provides Snakedeploy/Snakemake tooling.
+- `snake` is the AlphaPulldownSnakemake orchestration environment.
+- AlphaPulldown itself is supplied by Snakemake rule containers, not by importing
+  `alphapulldown` in the orchestration environment.
+- `config/remote/paths.env` should leave `SNAKEMAKE_PROFILE` and `SLURM_PROFILE`
+  empty for single-node RunPod unless real profile directories exist.
+
 Confirm the expected files exist:
 
 ```bash

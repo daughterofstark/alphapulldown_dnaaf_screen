@@ -68,12 +68,18 @@ else fail "Python" "python3 not found"; fi
 if command -v snakemake >/dev/null 2>&1; then ok "Snakemake" "$(snakemake --version)"
 else fail "Snakemake" "not found"; fi
 
-if python3 -c 'import alphapulldown; print(getattr(alphapulldown, "__version__", "unknown"))' >/tmp/ap_version.$$ 2>/tmp/ap_err.$$; then
-  ok "AlphaPulldown" "$(cat /tmp/ap_version.$$)"
+if python3 -c 'import alphapulldown_input_parser; print("alphapulldown-input-parser importable")' >/tmp/ap_parser.$$ 2>/tmp/ap_parser_err.$$; then
+  ok "Input parser" "$(cat /tmp/ap_parser.$$)"
 else
-  fail "AlphaPulldown" "$(cat /tmp/ap_err.$$ 2>/dev/null || echo not importable)"
+  fail "Input parser" "$(cat /tmp/ap_parser_err.$$ 2>/dev/null || echo not importable)"
 fi
-rm -f /tmp/ap_version.$$ /tmp/ap_err.$$
+
+if python3 -c 'import alphapulldown' >/tmp/ap_version.$$ 2>/tmp/ap_err.$$; then
+  ok "AlphaPulldown Python package" "importable in orchestration environment"
+else
+  report "AlphaPulldown Python package" "not importable in orchestration environment; expected for containerized AlphaPulldownSnakemake runtime"
+fi
+rm -f /tmp/ap_parser.$$ /tmp/ap_parser_err.$$ /tmp/ap_version.$$ /tmp/ap_err.$$
 
 if command -v nvidia-smi >/dev/null 2>&1; then
   ok "nvidia-smi" "$(nvidia-smi --query-gpu=name,memory.total --format=csv,noheader | paste -sd ';' -)"
@@ -101,8 +107,19 @@ done
 if [[ -f "${AP_WORKFLOW_DIR:-}/workflow/Snakefile" ]]; then ok "Workflow Snakefile" "${AP_WORKFLOW_DIR}/workflow/Snakefile"
 else fail "Workflow Snakefile" "missing: ${AP_WORKFLOW_DIR:-unset}/workflow/Snakefile"; fi
 
-if [[ -d "${SNAKEMAKE_PROFILE:-}" ]]; then ok "Desktop profile" "${SNAKEMAKE_PROFILE}"
-else fail "Desktop profile" "missing: ${SNAKEMAKE_PROFILE:-unset}"; fi
+if [[ -n "${SNAKEMAKE_PROFILE:-}" ]]; then
+  if [[ -d "${SNAKEMAKE_PROFILE}" ]]; then ok "Desktop profile" "${SNAKEMAKE_PROFILE}"
+  else fail "Desktop profile" "configured but missing: ${SNAKEMAKE_PROFILE}"; fi
+else
+  report "Desktop profile" "not configured; local single-node execution will use --cores"
+fi
+
+if [[ -n "${SLURM_PROFILE:-}" ]]; then
+  if [[ -d "${SLURM_PROFILE}" ]]; then ok "SLURM profile" "${SLURM_PROFILE}"
+  else fail "SLURM profile" "configured but missing: ${SLURM_PROFILE}"; fi
+else
+  report "SLURM profile" "not configured"
+fi
 
 if [[ -f "${FASTA_MANIFEST:-}" ]]; then ok "FASTA manifest" "${FASTA_MANIFEST}"
 else fail "FASTA manifest" "missing: ${FASTA_MANIFEST:-unset}"; fi

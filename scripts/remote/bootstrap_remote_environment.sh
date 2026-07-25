@@ -66,6 +66,7 @@ AP_SNAKEMAKE_VERSION="${AP_SNAKEMAKE_VERSION:-2.5.0}"
 CONDA_ENV_NAME="${CONDA_ENV_NAME:-snake}"
 AP_WORKFLOW_DIR="${AP_WORKFLOW_DIR:?AP_WORKFLOW_DIR must be set}"
 PROVENANCE_DIR="${PROVENANCE_DIR:?PROVENANCE_DIR must be set}"
+SNAKEDEPLOY_BIN="${SNAKEDEPLOY_BIN:-snakedeploy}"
 RUN_ID="bootstrap-$(date -u +%Y%m%dT%H%M%SZ)"
 BOOTSTRAP_PROVENANCE="${PROVENANCE_DIR}/${RUN_ID}"
 ensure_dir "${BOOTSTRAP_PROVENANCE}"
@@ -76,15 +77,23 @@ echo "Architecture: $(uname -m)"
 nvidia-smi --query-gpu=name,memory.total,driver_version --format=csv,noheader || true
 
 ENV_URL="https://raw.githubusercontent.com/KosinskiLab/AlphaPulldownSnakemake/${AP_SNAKEMAKE_VERSION}/workflow/envs/alphapulldown.yaml"
+ENV_SOURCE="${ENV_URL}"
+if [[ -n "${AP_ENV_YAML:-}" ]]; then
+  if [[ ! -f "${AP_ENV_YAML}" ]]; then
+    echo "AP_ENV_YAML is set but does not exist: ${AP_ENV_YAML}" >&2
+    exit 2
+  fi
+  ENV_SOURCE="${AP_ENV_YAML}"
+fi
 if ! "${ENV_MANAGER}" env list | awk '{print $1}' | grep -qx "${CONDA_ENV_NAME}"; then
-  run_or_echo "${DRY_RUN}" "${ENV_MANAGER}" env create -n "${CONDA_ENV_NAME}" -f "${ENV_URL}"
+  run_or_echo "${DRY_RUN}" "${ENV_MANAGER}" env create -n "${CONDA_ENV_NAME}" -f "${ENV_SOURCE}"
 else
   echo "Conda environment already exists: ${CONDA_ENV_NAME}"
 fi
 
 if [[ ! -d "${AP_WORKFLOW_DIR}/workflow" ]]; then
-  require_command snakedeploy
-  run_or_echo "${DRY_RUN}" snakedeploy deploy-workflow \
+  require_command "${SNAKEDEPLOY_BIN}"
+  run_or_echo "${DRY_RUN}" "${SNAKEDEPLOY_BIN}" deploy-workflow \
     https://github.com/KosinskiLab/AlphaPulldownSnakemake \
     "${AP_WORKFLOW_DIR}" \
     --tag "${AP_SNAKEMAKE_VERSION}"

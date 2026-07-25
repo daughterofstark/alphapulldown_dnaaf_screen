@@ -8,6 +8,7 @@ from pathlib import Path
 from unittest import mock
 
 from alphapulldown_dnaaf_screen.remote import (
+    SUPPORTED_FEATURE_MODES,
     UPSTREAM_CONFIG_KEYS,
     create_run_provenance,
     feature_generation_command,
@@ -74,6 +75,7 @@ def write_fixture(root: Path) -> Path:
             [
                 f"REMOTE_PROJECT_ROOT={root}",
                 "AP_WORKFLOW_DIR=${REMOTE_PROJECT_ROOT}/workflow",
+                "AP_ENV_YAML=",
                 "CONDA_ENV_NAME=snake",
                 "AP_SNAKEMAKE_VERSION=2.5.0",
                 "FEATURE_CONFIG=${REMOTE_PROJECT_ROOT}/config/remote/"
@@ -92,6 +94,9 @@ def write_fixture(root: Path) -> Path:
                 "FEATURE_MODE=localdb",
                 "FEATURE_FILE_PATTERN={record_id}_af3_input.json",
                 "SNAKEMAKE_CORES=4",
+                "SNAKEMAKE_JOBS=1",
+                "SNAKEMAKE_PROFILE=",
+                "SLURM_PROFILE=",
                 "",
             ]
         )
@@ -182,6 +187,14 @@ class RemoteHandoffTests(unittest.TestCase):
             self.assertIn("--use_mmseqs2: true", resolved)
             self.assertIn("docker://kosinskilab/alphafold2:2.5.0", resolved)
 
+    def test_feature_mode_values_are_explicit(self) -> None:
+        self.assertEqual(SUPPORTED_FEATURE_MODES, {"localdb", "mmseqs2"})
+        with tempfile.TemporaryDirectory() as tmp:
+            env = write_fixture(Path(tmp))
+            env.write_text(env.read_text().replace("FEATURE_MODE=localdb", "FEATURE_MODE=af3"))
+            with self.assertRaises(ValidationError):
+                load_remote_config(env)
+
     def test_prediction_inputs_are_fasta_paths_for_feature_reuse(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
             config = load_remote_config(write_fixture(Path(tmp)))
@@ -246,6 +259,38 @@ class RemoteHandoffTests(unittest.TestCase):
             text = (root / path).read_text(encoding="utf-8")
             for token in forbidden:
                 self.assertNotIn(token, text, f"{path} contains hardcoded path token {token}")
+
+    def test_runpod_defaults_do_not_assume_profiles_or_cluster_jobs(self) -> None:
+        values = parse_env_file(Path("config/remote/paths.example.env"))
+        self.assertEqual(values["SNAKEMAKE_JOBS"], "1")
+        self.assertEqual(values["SNAKEMAKE_PROFILE"], "")
+        self.assertEqual(values["SLURM_PROFILE"], "")
+
+    def test_bootstrap_supports_local_pinned_env_yaml(self) -> None:
+        text = Path("scripts/remote/bootstrap_remote_environment.sh").read_text(encoding="utf-8")
+        self.assertIn("AP_ENV_YAML", text)
+        self.assertIn("ENV_SOURCE", text)
+        self.assertIn("SNAKEDEPLOY_BIN", text)
+        self.assertIn("env create -n", text)
+
+    def test_remote_python_sets_repo_src_pythonpath(self) -> None:
+        text = Path("scripts/remote/common.sh").read_text(encoding="utf-8")
+        self.assertIn('PYTHONPATH="${REPO_ROOT}/src:${PYTHONPATH:-}"', text)
+
+    def test_validator_does_not_require_alphapulldown_import(self) -> None:
+        text = Path("scripts/remote/validate_remote_environment.sh").read_text(encoding="utf-8")
+        self.assertIn("alphapulldown-input-parser importable", text)
+        self.assertIn("expected for containerized AlphaPulldownSnakemake runtime", text)
+        self.assertNotIn('fail "AlphaPulldown"', text)
+
+    def test_profiles_are_optional_for_snakedeploy_layout(self) -> None:
+        text = Path("scripts/remote/validate_remote_environment.sh").read_text(encoding="utf-8")
+        self.assertIn("local single-node execution will use --cores", text)
+        with tempfile.TemporaryDirectory() as tmp:
+            config = load_remote_config(write_fixture(Path(tmp)))
+            command = feature_generation_command(config, dry_run=True)
+            self.assertIn("--cores", command)
+            self.assertNotIn("--profile", command)
 
 def top_level_keys(path: Path) -> set[str]:
     keys: set[str] = set()

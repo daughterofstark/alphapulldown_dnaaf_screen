@@ -17,6 +17,7 @@ from .provenance import git_metadata, sha256_file
 from .validation import ValidationError, require, validate_accession
 
 SUPPORTED_SCREENS = {"controls", "transport", "full"}
+SUPPORTED_FEATURE_MODES = {"localdb", "mmseqs2"}
 DEFAULT_FEATURE_PATTERN = "{record_id}_af3_input.json"
 UPSTREAM_CONFIG_KEYS = {
     "input_files",
@@ -143,6 +144,11 @@ class RemoteConfig:
         output_dir = required_path("OUTPUT_DIR")
         feature_dir = Path(values.get("FEATURE_DIR", str(output_dir / "features")))
         feature_mode = values.get("FEATURE_MODE", "localdb")
+        require(
+            feature_mode in SUPPORTED_FEATURE_MODES,
+            f"Unsupported FEATURE_MODE {feature_mode!r}; expected one of "
+            f"{sorted(SUPPORTED_FEATURE_MODES)}",
+        )
         default_pattern = (
             "{record_id}.pkl.xz" if feature_mode == "mmseqs2" else DEFAULT_FEATURE_PATTERN
         )

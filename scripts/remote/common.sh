@@ -47,9 +47,9 @@ ensure_dir() {
 
 remote_python() {
   if [[ -n "${PYTHON_BIN:-}" ]]; then
-    "${PYTHON_BIN}" "$@"
+    PYTHONPATH="${REPO_ROOT}/src:${PYTHONPATH:-}" "${PYTHON_BIN}" "$@"
   else
-    python3 "$@"
+    PYTHONPATH="${REPO_ROOT}/src:${PYTHONPATH:-}" python3 "$@"
   fi
 }
 
@@ -64,4 +64,3 @@ run_or_echo() {
     "$@"
   fi
 }
-
