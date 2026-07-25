@@ -292,6 +292,46 @@ class RemoteHandoffTests(unittest.TestCase):
             self.assertIn("--cores", command)
             self.assertNotIn("--profile", command)
 
+    def test_runpod_rebuild_detects_corruption_by_execution(self) -> None:
+        text = Path("scripts/remote/rebuild_runpod_runtime.sh").read_text(encoding="utf-8")
+        self.assertIn("miniforge_is_healthy()", text)
+        self.assertIn("import encodings, ssl, sys", text)
+        self.assertIn('"${MINIFORGE_DIR}/bin/conda" --version', text)
+        self.assertIn('"${MINIFORGE_DIR}/bin/mamba" --version', text)
+        self.assertIn("env_is_healthy()", text)
+
+    def test_runpod_rebuild_moves_broken_runtime_aside_safely(self) -> None:
+        text = Path("scripts/remote/rebuild_runpod_runtime.sh").read_text(encoding="utf-8")
+        self.assertIn('BROKEN_DIR="${MINIFORGE_DIR}.broken.${TIMESTAMP}"', text)
+        self.assertIn('mv "${MINIFORGE_DIR}" "${BROKEN_DIR}"', text)
+        self.assertNotIn("rm -rf", text)
+        self.assertNotIn("data/processed", text)
+        self.assertNotIn("alphapulldown_results", text)
+
+    def test_runpod_rebuild_recreates_expected_envs_and_workflow(self) -> None:
+        text = Path("scripts/remote/rebuild_runpod_runtime.sh").read_text(encoding="utf-8")
+        self.assertIn("snakedeploy-tools", text)
+        self.assertIn("create -n", text)
+        self.assertIn("snakedeploy snakemake", text)
+        self.assertIn("alphapulldown_snakemake_${AP_SNAKEMAKE_VERSION}.yaml", text)
+        self.assertIn("env create -n", text)
+        self.assertIn("deploy-workflow", text)
+        self.assertIn("--tag", text)
+
+    def test_runpod_rebuild_checks_parser_not_alphapulldown(self) -> None:
+        text = Path("scripts/remote/rebuild_runpod_runtime.sh").read_text(encoding="utf-8")
+        self.assertIn("alphapulldown_input_parser", text)
+        self.assertIn("expected for containerized workflow runtime", text)
+        self.assertNotIn("import snakemake, alphapulldown;", text)
+
+    def test_runpod_rebuild_is_dry_run_capable_and_workspace_scoped(self) -> None:
+        text = Path("scripts/remote/rebuild_runpod_runtime.sh").read_text(encoding="utf-8")
+        self.assertIn("--dry-run", text)
+        self.assertIn("DRY RUN:", text)
+        self.assertIn("WORKSPACE_ROOT=\"${WORKSPACE_ROOT:-/workspace}\"", text)
+        self.assertIn("/workspace|/workspace/*", text)
+        self.assertIn("RUNPOD_LOG_DIR", text)
+
 def top_level_keys(path: Path) -> set[str]:
     keys: set[str] = set()
     for raw_line in path.read_text(encoding="utf-8").splitlines():

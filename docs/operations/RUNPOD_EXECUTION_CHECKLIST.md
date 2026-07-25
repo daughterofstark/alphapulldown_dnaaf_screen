@@ -48,18 +48,56 @@ cd alphapulldown
 git checkout feature/alphapulldown-implementation
 ```
 
-## Resume an Existing RunPod Session
+## Resume After RunPod Host Migration
 
-Use this when the pod already has Miniforge under `/workspace/miniforge3`, a
-`snakedeploy-tools` environment, and the project clone at `/workspace/alphapulldown`.
-These commands are validation/dry-run commands only and do not start AlphaPulldown
-feature generation or inference:
+RunPod host migration can preserve `/workspace` while corrupting executable
+runtime state under `/workspace/miniforge3`. Treat Conda environments as
+rebuildable tooling, not as durable project data. The repository, generated input
+files, reimbursement logs, and previous results should remain separate from the
+runtime.
+
+The recovery script below operates only on runtime/tooling locations under
+`/workspace`: `/workspace/miniforge3`, `/workspace/alphapulldown_runtime`,
+`/workspace/workflows`, and `/workspace/runpod_logs`. It does not run
+AlphaPulldown feature generation or inference.
+
+First inspect what would happen:
+
+```bash
+cd /workspace/alphapulldown
+git status --short --branch
+bash scripts/remote/rebuild_runpod_runtime.sh --dry-run
+```
+
+If the dry run only touches runtime/tooling locations, rebuild the runtime:
+
+```bash
+bash scripts/remote/rebuild_runpod_runtime.sh
+```
+
+The script checks Miniforge by running Python/Conda/Mamba commands, not by
+trusting directory existence. If `/workspace/miniforge3` is broken, it is moved
+aside to a timestamped `/workspace/miniforge3.broken.<timestamp>` directory and a
+fresh Miniforge is installed. It then recreates:
+
+- `snakedeploy-tools`, containing Snakedeploy and Snakemake.
+- `snake`, the AlphaPulldownSnakemake orchestration environment.
+- `/workspace/alphapulldown_runtime/alphapulldown_snakemake_2.5.0.yaml`, the
+  locally cached pinned upstream environment file.
+- `/workspace/workflows/AlphaPulldownSnakemake`, if the pinned workflow is not
+  already deployed.
+
+The `snake` environment is expected to import `alphapulldown_input_parser`.
+It is **not** expected to import `alphapulldown`; AlphaPulldown itself is supplied
+by the containerized Snakemake workflow at rule runtime.
+
+After rebuilding, validate without starting heavy compute:
 
 ```bash
 export PATH="/workspace/miniforge3/bin:$PATH"
+source /workspace/miniforge3/etc/profile.d/conda.sh
+conda activate snake
 cd /workspace/alphapulldown
-conda activate snakedeploy-tools
-git status --short --branch
 bash scripts/remote/bootstrap_remote_environment.sh --dry-run
 bash scripts/remote/validate_remote_environment.sh
 bash scripts/remote/run_feature_generation.sh --dry-run
@@ -67,7 +105,7 @@ bash scripts/remote/run_feature_generation.sh --dry-run
 
 Expected architecture:
 
-- `snakedeploy-tools` provides Snakedeploy/Snakemake tooling.
+- `snakedeploy-tools` provides Snakedeploy/Snakemake deployment tooling.
 - `snake` is the AlphaPulldownSnakemake orchestration environment.
 - AlphaPulldown itself is supplied by Snakemake rule containers, not by importing
   `alphapulldown` in the orchestration environment.
