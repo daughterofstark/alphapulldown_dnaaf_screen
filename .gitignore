@@ -58,6 +58,8 @@ data/processed/**
 !data/processed/alphapulldown/*.csv
 !data/processed/alphapulldown/*.txt
 !data/processed/alphapulldown/*.tsv
+!data/processed/benchmarks/
+!data/processed/benchmarks/*.json
 !data/processed/screens/
 !data/processed/screens/*.json
 !data/processed/screens/*.tsv

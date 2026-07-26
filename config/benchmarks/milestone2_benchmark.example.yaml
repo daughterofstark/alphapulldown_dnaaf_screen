@@ -1,0 +1,19 @@
+benchmark_id: "milestone2_alphapulldown_validation"
+description: "Closed Milestone 2 benchmark configuration. This config must not fall back to the 62-target universe manifest."
+scenario_manifest: "data/processed/benchmarks/milestone2_scenarios.json"
+target_universe_fallback: "prohibited"
+input:
+  scenario_manifest: "data/processed/benchmarks/milestone2_scenarios.json"
+  alphapulldown_inputs_dir: "data/processed/benchmarks/alphapulldown_inputs"
+config:
+  resolved_config_dir: "config/benchmarks/resolved/milestone2"
+output:
+  output_dir: "results/milestone2_benchmark"
+  logs_dir: "results/milestone2_benchmark/logs"
+provenance:
+  provenance_dir: "results/provenance/milestone2_benchmark"
+excluded_scenario_ids:
+  - "human_dnaaf9_ift74"
+  - "human_dnaaf9_ift81"
+  - "ift74_ift81"
+  - "human_dnaaf18_ift46_ift74_ift81"
