@@ -60,6 +60,10 @@ data/processed/**
 !data/processed/alphapulldown/*.tsv
 !data/processed/benchmarks/
 !data/processed/benchmarks/*.json
+!data/processed/benchmarks/fasta/
+!data/processed/benchmarks/fasta/*.tsv
+!data/processed/benchmarks/alphapulldown_inputs/
+!data/processed/benchmarks/alphapulldown_inputs/*.tsv
 !data/processed/screens/
 !data/processed/screens/*.json
 !data/processed/screens/*.tsv

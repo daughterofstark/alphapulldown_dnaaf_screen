@@ -7,7 +7,7 @@ source "${SCRIPT_DIR}/common.sh"
 
 usage() {
   cat <<'USAGE'
-Usage: run_prediction.sh --screen controls|transport [--executor desktop|slurm] [--env-file PATH] [--dry-run]
+Usage: run_prediction.sh --screen controls|transport|milestone2 [--executor desktop|slurm] [--env-file PATH] [--dry-run]
 
 Runs or dry-runs GPU prediction after precomputed feature files exist.
 The full screen is intentionally deferred and rejected by default.

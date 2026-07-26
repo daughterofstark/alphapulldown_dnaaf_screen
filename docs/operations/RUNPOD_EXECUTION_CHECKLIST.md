@@ -172,10 +172,47 @@ TMP_DIR="/workspace/alphapulldown/results/tmp"
 PROVENANCE_DIR="/workspace/alphapulldown/results/provenance"
 ```
 
+For the Milestone 2 benchmark, use the benchmark-only remote environment so
+feature generation cannot fall back to the 62-target universe:
+
+```bash
+cp config/benchmarks/milestone2_remote.example.env config/remote/paths.env
+sed -n '1,220p' config/remote/paths.env
+```
+
+Confirm these benchmark-specific paths before any dry run:
+
+```bash
+grep -E '^(FASTA_MANIFEST|ALPHAPULLDOWN_INPUT_DIR|FEATURE_DIR|OUTPUT_DIR|LOG_DIR|TMP_DIR|PROVENANCE_DIR)=' \
+  config/remote/paths.env
+```
+
+Expected Milestone 2 path wiring:
+
+- `FASTA_MANIFEST=/workspace/alphapulldown/data/processed/benchmarks/fasta/fasta_manifest.tsv`
+- `ALPHAPULLDOWN_INPUT_DIR=/workspace/alphapulldown/data/processed/benchmarks/alphapulldown_inputs`
+- `FEATURE_DIR=/workspace/alphapulldown/results/milestone2_benchmark/features`
+- `OUTPUT_DIR=/workspace/alphapulldown/results/milestone2_benchmark/alphapulldown`
+- `LOG_DIR=/workspace/alphapulldown/results/milestone2_benchmark/logs`
+- `TMP_DIR=/workspace/alphapulldown/results/milestone2_benchmark/tmp`
+- `PROVENANCE_DIR=/workspace/alphapulldown/results/provenance/milestone2_benchmark`
+
 Run feature generation only after the dry run resolves `prediction_container` to the local SIF path, not `docker://kosinskilab/alphafold2:2.5.0`:
 
 ```bash
+bash scripts/remote/bootstrap_remote_environment.sh --dry-run
+bash scripts/remote/validate_remote_environment.sh
 bash scripts/remote/run_feature_generation.sh
+```
+
+Check Milestone 2 feature coverage after feature generation:
+
+```bash
+PYTHONPATH=src python -m alphapulldown_dnaaf_screen.remote_cli \
+  --config config/remote/paths.env \
+  check-feature-coverage \
+  --screen milestone2 \
+  --json
 ```
 
 Required Phase B artifacts:
@@ -258,13 +295,13 @@ sha256sum -c "${APPTAINER_PREDICTION_SIF}.sha256"
 apptainer inspect "${APPTAINER_PREDICTION_SIF}"
 bash scripts/remote/bootstrap_remote_environment.sh --dry-run
 bash scripts/remote/validate_remote_environment.sh
-bash scripts/remote/run_prediction.sh --screen controls --dry-run
+bash scripts/remote/run_prediction.sh --screen milestone2 --dry-run
 ```
 
-Run controls first:
+Run the Milestone 2 benchmark first:
 
 ```bash
-bash scripts/remote/run_prediction.sh --screen controls
+bash scripts/remote/run_prediction.sh --screen milestone2
 ```
 
 After controls:

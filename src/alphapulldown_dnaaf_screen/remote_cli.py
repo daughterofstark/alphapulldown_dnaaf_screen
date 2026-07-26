@@ -33,12 +33,16 @@ def build_parser() -> argparse.ArgumentParser:
     feature.add_argument("--dry-run", action="store_true")
 
     prediction = subparsers.add_parser("prediction-command")
-    prediction.add_argument("--screen", choices=["controls", "transport", "full"], required=True)
+    prediction.add_argument(
+        "--screen", choices=["controls", "transport", "full", "milestone2"], required=True
+    )
     prediction.add_argument("--executor", choices=["desktop", "slurm"], default="desktop")
     prediction.add_argument("--dry-run", action="store_true")
 
     coverage = subparsers.add_parser("check-feature-coverage")
-    coverage.add_argument("--screen", choices=["controls", "transport", "full"], required=True)
+    coverage.add_argument(
+        "--screen", choices=["controls", "transport", "full", "milestone2"], required=True
+    )
     coverage.add_argument("--json", action="store_true")
     return parser
 

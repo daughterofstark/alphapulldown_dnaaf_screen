@@ -17,7 +17,7 @@ from typing import Callable
 from .provenance import git_metadata, sha256_file
 from .validation import ValidationError, require, validate_accession
 
-SUPPORTED_SCREENS = {"controls", "transport", "full"}
+SUPPORTED_SCREENS = {"controls", "transport", "full", "milestone2"}
 SUPPORTED_FEATURE_MODES = {"localdb", "mmseqs2"}
 DEFAULT_FEATURE_PATTERN = "{record_id}_af3_input.json"
 UPSTREAM_CONFIG_KEYS = {
@@ -238,6 +238,87 @@ def _fasta_spec_for_accession(config: RemoteConfig, accession: str) -> str:
     return str(fasta_path)
 
 
+def _milestone2_manifest_path(input_dir: Path) -> Path:
+    return input_dir.parent / "milestone2_scenarios.json"
+
+
+def read_milestone2_scenarios(input_dir: Path) -> dict[str, dict[str, object]]:
+    path = _milestone2_manifest_path(input_dir)
+    require(path.exists(), f"Missing Milestone 2 scenario manifest: {path}")
+    payload = json.loads(path.read_text(encoding="utf-8"))
+    require(
+        payload.get("target_universe_fallback") == "prohibited",
+        "Milestone 2 benchmark must explicitly prohibit target-universe fallback",
+    )
+    rows = payload.get("scenarios")
+    require(isinstance(rows, list), f"Milestone 2 scenarios must be a list: {path}")
+    scenarios: dict[str, dict[str, object]] = {}
+    for row in rows:
+        require(isinstance(row, dict), f"Malformed Milestone 2 scenario row in {path}")
+        scenario_id = str(row.get("scenario_id", ""))
+        require(bool(scenario_id), f"Milestone 2 scenario missing scenario_id in {path}")
+        require(scenario_id not in scenarios, f"Duplicate Milestone 2 scenario ID: {scenario_id}")
+        scenarios[scenario_id] = row
+    return scenarios
+
+
+def excluded_milestone2_scenario_ids(input_dir: Path) -> set[str]:
+    payload = json.loads(_milestone2_manifest_path(input_dir).read_text(encoding="utf-8"))
+    excluded = payload.get("excluded_scenario_ids", [])
+    require(isinstance(excluded, list), "Milestone 2 excluded_scenario_ids must be a list")
+    return {str(item) for item in excluded}
+
+
+def read_milestone2_sample_sheet(input_dir: Path) -> list[dict[str, str]]:
+    path = input_dir / "milestone2_sample_sheet.tsv"
+    require(path.exists(), f"Missing Milestone 2 sample sheet: {path}")
+    scenarios = read_milestone2_scenarios(input_dir)
+    excluded = excluded_milestone2_scenario_ids(input_dir)
+    ready_ids = [
+        scenario_id
+        for scenario_id, scenario in scenarios.items()
+        if scenario.get("execution_status") == "ready_from_versioned_records"
+    ]
+    with path.open(encoding="utf-8", newline="") as handle:
+        rows = list(csv.DictReader(handle, delimiter="\t"))
+    require(rows, f"Milestone 2 sample sheet is empty: {path}")
+    require(
+        {"scenario_id", "record_ids", "accessions"}.issubset(rows[0].keys()),
+        f"Milestone 2 sample sheet must contain scenario_id, record_ids, accessions: {path}",
+    )
+    seen: list[str] = []
+    for row in rows:
+        scenario_id = row["scenario_id"]
+        require(scenario_id not in excluded, f"Milestone 2 scenario is explicitly excluded: {scenario_id}")
+        require(scenario_id in scenarios, f"Unknown Milestone 2 scenario ID: {scenario_id}")
+        scenario = scenarios[scenario_id]
+        status = scenario.get("execution_status")
+        require(
+            status == "ready_from_versioned_records",
+            f"Milestone 2 scenario {scenario_id} is blocked because versioned sequence "
+            f"records are absent; status={status}",
+        )
+        expected_records = [str(item) for item in scenario.get("target_record_ids", [])]
+        actual_records = [item for item in row["record_ids"].split("+") if item]
+        require(
+            actual_records == expected_records,
+            f"Milestone 2 scenario {scenario_id} record_ids do not match the scenario manifest",
+        )
+        accessions = [item for item in row["accessions"].split("+") if item]
+        require(
+            len(accessions) == len(actual_records),
+            f"Milestone 2 scenario {scenario_id} has mismatched record/accession counts",
+        )
+        for accession in accessions:
+            validate_accession(accession)
+        seen.append(scenario_id)
+    require(
+        seen == ready_ids,
+        "Milestone 2 sample sheet must contain exactly the ready human scenarios in manifest order",
+    )
+    return rows
+
+
 def accessions_for_screen(screen: str, input_dir: Path) -> list[str]:
     require(screen in SUPPORTED_SCREENS, f"Unsupported screen: {screen}")
     if screen == "controls":
@@ -257,6 +338,12 @@ def accessions_for_screen(screen: str, input_dir: Path) -> list[str]:
                 line.strip() for line in path.read_text().splitlines() if line.strip()
             )
         return sorted(set(accessions))
+    if screen == "milestone2":
+        rows = read_milestone2_sample_sheet(input_dir)
+        accessions = []
+        for row in rows:
+            accessions.extend(row["accessions"].split("+"))
+        return sorted(set(accessions))
     path = input_dir / "full_screen_pairs.tsv"
     require(path.exists(), f"Missing full-screen pairs table: {path}")
     with path.open(encoding="utf-8", newline="") as handle:
@@ -268,10 +355,23 @@ def accessions_for_screen(screen: str, input_dir: Path) -> list[str]:
 
 
 def validate_accession_files(config: RemoteConfig) -> None:
-    for accession in accessions_for_screen("controls", config.alphapulldown_input_dir):
-        validate_accession(accession)
-    for accession in accessions_for_screen("transport", config.alphapulldown_input_dir):
-        validate_accession(accession)
+    validated_any = False
+    if (config.alphapulldown_input_dir / "control_sample_sheet.csv").exists():
+        validated_any = True
+        for accession in accessions_for_screen("controls", config.alphapulldown_input_dir):
+            validate_accession(accession)
+    if (
+        (config.alphapulldown_input_dir / "transport_baits.txt").exists()
+        or (config.alphapulldown_input_dir / "ift_b_preys.txt").exists()
+    ):
+        validated_any = True
+        for accession in accessions_for_screen("transport", config.alphapulldown_input_dir):
+            validate_accession(accession)
+    if (config.alphapulldown_input_dir / "milestone2_sample_sheet.tsv").exists():
+        validated_any = True
+        for accession in accessions_for_screen("milestone2", config.alphapulldown_input_dir):
+            validate_accession(accession)
+    require(validated_any, f"No supported AlphaPulldown input files found in {config.alphapulldown_input_dir}")
 
 
 def expected_feature_paths(config: RemoteConfig, accessions: list[str]) -> dict[str, Path]:
@@ -347,6 +447,21 @@ def write_prediction_input_files(
                 continue
             fasta_specs = [
                 _fasta_spec_for_accession(config, item) for item in line.strip().split("+")
+            ]
+            lines.append("+".join(fasta_specs))
+        path.write_text("\n".join(lines) + "\n", encoding="utf-8")
+        return [path]
+
+    if screen == "milestone2":
+        rows = read_milestone2_sample_sheet(config.alphapulldown_input_dir)
+        record_to_fasta = _record_to_fasta_path(config)
+        path = output_dir / "milestone2_sample_sheet.fasta_paths.txt"
+        lines = []
+        for row in rows:
+            fasta_specs = [
+                str(record_to_fasta[record_id])
+                for record_id in row["record_ids"].split("+")
+                if record_id
             ]
             lines.append("+".join(fasta_specs))
         path.write_text("\n".join(lines) + "\n", encoding="utf-8")
