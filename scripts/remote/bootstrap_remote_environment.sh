@@ -53,6 +53,11 @@ if ! command -v nvidia-smi >/dev/null 2>&1; then
   exit 2
 fi
 
+if ! command -v apptainer >/dev/null 2>&1; then
+  echo "Apptainer is required for the pinned AlphaPulldownSnakemake container runtime." >&2
+  exit 2
+fi
+
 if command -v mamba >/dev/null 2>&1; then
   ENV_MANAGER="mamba"
 elif command -v conda >/dev/null 2>&1; then

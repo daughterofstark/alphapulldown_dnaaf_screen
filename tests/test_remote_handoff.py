@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import json
 import platform
+import subprocess
 import tempfile
 import unittest
 from pathlib import Path
@@ -18,6 +19,7 @@ from alphapulldown_dnaaf_screen.remote import (
     prediction_command,
     require_linux,
     stable_run_id,
+    validate_configured_sif,
     write_resolved_feature_config,
     write_resolved_prediction_config,
 )
@@ -95,6 +97,7 @@ def write_fixture(root: Path) -> Path:
                 "FEATURE_FILE_PATTERN={record_id}_af3_input.json",
                 "SNAKEMAKE_CORES=4",
                 "SNAKEMAKE_JOBS=1",
+                "APPTAINER_PREFIX=${REMOTE_PROJECT_ROOT}/results/containers/snakemake_apptainer",
                 "SNAKEMAKE_PROFILE=",
                 "SLURM_PROFILE=",
                 "",
@@ -134,6 +137,9 @@ class RemoteHandoffTests(unittest.TestCase):
             self.assertNotIn("--config", command)
             self.assertIn("--snakefile", command)
             self.assertIn("--directory", command)
+            self.assertIn("--software-deployment-method", command)
+            self.assertIn("apptainer", command)
+            self.assertIn("--apptainer-prefix", command)
 
     def test_feature_coverage_validation(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
@@ -172,6 +178,16 @@ class RemoteHandoffTests(unittest.TestCase):
             self.assertIn("only_generate_features: true", text)
             self.assertIn("--data_pipeline: \"alphafold3\"", text)
 
+    def test_yaml_serializes_empty_collections_inline(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            config = load_remote_config(write_fixture(Path(tmp)))
+            path, _ = write_resolved_feature_config(config, run_id="empty-yaml-test")
+            text = path.read_text()
+            self.assertIn("feature_directory: []", text)
+            self.assertIn("recursive_report_arguments: {}", text)
+            self.assertNotIn("feature_directory:\nonly_generate_features", text)
+            self.assertNotIn("recursive_report_arguments:\ncreate_feature_arguments", text)
+
     def test_mmseqs2_mode_uses_alphafold2_pipeline(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
             env = write_fixture(Path(tmp))
@@ -186,6 +202,88 @@ class RemoteHandoffTests(unittest.TestCase):
             self.assertIn("--data_pipeline: \"alphafold2\"", resolved)
             self.assertIn("--use_mmseqs2: true", resolved)
             self.assertIn("docker://kosinskilab/alphafold2:2.5.0", resolved)
+
+    def test_configured_sif_path_is_emitted_into_feature_config(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            env = write_fixture(root)
+            sif = root / "containers" / "kosinskilab_alphafold2_2.5.0.sif"
+            env.write_text(
+                env.read_text()
+                .replace("FEATURE_MODE=localdb", "FEATURE_MODE=mmseqs2")
+                + f"APPTAINER_PREDICTION_SIF={sif}\n"
+            )
+            config = load_remote_config(env)
+            path, _ = write_resolved_feature_config(config, run_id="feature-sif")
+            text = path.read_text()
+            self.assertIn(f'prediction_container: "{sif}"', text)
+            self.assertNotIn("docker://kosinskilab/alphafold2:2.5.0", text)
+
+    def test_configured_sif_path_is_emitted_into_prediction_config(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            env = write_fixture(root)
+            sif = root / "containers" / "kosinskilab_alphafold2_2.5.0.sif"
+            env.write_text(
+                env.read_text()
+                .replace("FEATURE_MODE=localdb", "FEATURE_MODE=mmseqs2")
+                + f"APPTAINER_PREDICTION_SIF={sif}\n"
+            )
+            config = load_remote_config(env)
+            path, _ = write_resolved_prediction_config(
+                config, screen="controls", run_id="prediction-sif"
+            )
+            text = path.read_text()
+            self.assertIn(f'prediction_container: "{sif}"', text)
+            self.assertNotIn("docker://kosinskilab/alphafold2:2.5.0", text)
+
+    def test_configured_sif_must_be_absolute(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            env = write_fixture(Path(tmp))
+            env.write_text(env.read_text() + "APPTAINER_PREDICTION_SIF=relative.sif\n")
+            with self.assertRaises(ValidationError):
+                load_remote_config(env)
+
+    def test_missing_sif_fails_validation(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            env = write_fixture(root)
+            env.write_text(env.read_text() + f"APPTAINER_PREDICTION_SIF={root / 'missing.sif'}\n")
+            config = load_remote_config(env)
+            with self.assertRaises(ValidationError):
+                validate_configured_sif(config, inspect_runner=successful_inspect)
+
+    def test_zero_byte_sif_fails_validation(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            sif = root / "empty.sif"
+            sif.write_bytes(b"")
+            env = write_fixture(root)
+            env.write_text(env.read_text() + f"APPTAINER_PREDICTION_SIF={sif}\n")
+            config = load_remote_config(env)
+            with self.assertRaises(ValidationError):
+                validate_configured_sif(config, inspect_runner=successful_inspect)
+
+    def test_invalid_apptainer_inspect_fails_validation(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            sif = root / "invalid.sif"
+            sif.write_bytes(b"not really a sif")
+            env = write_fixture(root)
+            env.write_text(env.read_text() + f"APPTAINER_PREDICTION_SIF={sif}\n")
+            config = load_remote_config(env)
+            with self.assertRaises(ValidationError):
+                validate_configured_sif(config, inspect_runner=failing_inspect)
+
+    def test_valid_sif_passes_validation(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            sif = root / "valid.sif"
+            sif.write_bytes(b"sif")
+            env = write_fixture(root)
+            env.write_text(env.read_text() + f"APPTAINER_PREDICTION_SIF={sif}\n")
+            config = load_remote_config(env)
+            validate_configured_sif(config, inspect_runner=successful_inspect)
 
     def test_feature_mode_values_are_explicit(self) -> None:
         self.assertEqual(SUPPORTED_FEATURE_MODES, {"localdb", "mmseqs2"})
@@ -312,6 +410,7 @@ class RemoteHandoffTests(unittest.TestCase):
         text = Path("scripts/remote/rebuild_runpod_runtime.sh").read_text(encoding="utf-8")
         self.assertIn("snakedeploy-tools", text)
         self.assertIn("create -n", text)
+        self.assertIn("-c conda-forge -c bioconda", text)
         self.assertIn("snakedeploy snakemake", text)
         self.assertIn("alphapulldown_snakemake_${AP_SNAKEMAKE_VERSION}.yaml", text)
         self.assertIn("env create -n", text)
@@ -332,6 +431,87 @@ class RemoteHandoffTests(unittest.TestCase):
         self.assertIn("/workspace|/workspace/*", text)
         self.assertIn("RUNPOD_LOG_DIR", text)
 
+    def test_bootstrap_and_validator_require_apptainer(self) -> None:
+        bootstrap = Path("scripts/remote/bootstrap_remote_environment.sh").read_text(
+            encoding="utf-8"
+        )
+        validator = Path("scripts/remote/validate_remote_environment.sh").read_text(
+            encoding="utf-8"
+        )
+        self.assertIn("command -v apptainer", bootstrap)
+        self.assertIn("Apptainer is required", bootstrap)
+        self.assertIn("command -v apptainer", validator)
+        self.assertIn("fail \"Apptainer\"", validator)
+
+    def test_apptainer_prep_detects_filesystem_types(self) -> None:
+        text = Path("scripts/remote/prepare_apptainer_image.sh").read_text(encoding="utf-8")
+        self.assertIn("findmnt -T", text)
+        self.assertIn("CACHE_FS", text)
+        self.assertIn("BUILD_FS", text)
+        self.assertIn("APPTAINER_TMPDIR", text)
+        self.assertIn("APPTAINER_CACHEDIR", text)
+
+    def test_apptainer_prep_refuses_network_build_storage(self) -> None:
+        text = Path("scripts/remote/prepare_apptainer_image.sh").read_text(encoding="utf-8")
+        self.assertIn("is_network_fs()", text)
+        self.assertIn("fuse*", text)
+        self.assertIn("Refusing to build SIF on network/FUSE filesystem", text)
+        self.assertIn("Warning: persistent Apptainer cache", text)
+
+    def test_apptainer_prep_requires_local_space_and_explicit_build_dir(self) -> None:
+        text = Path("scripts/remote/prepare_apptainer_image.sh").read_text(encoding="utf-8")
+        self.assertIn("APPTAINER_LOCAL_BUILD_DIR must be set", text)
+        self.assertIn("APPTAINER_MIN_LOCAL_FREE_GB", text)
+        self.assertIn("Insufficient local build space", text)
+        self.assertNotIn('APPTAINER_LOCAL_BUILD_DIR="${APPTAINER_LOCAL_BUILD_DIR:-/tmp', text)
+        self.assertIn("Apptainer paths must be absolute", text)
+
+    def test_apptainer_prep_reuses_valid_images_and_recovers_partials(self) -> None:
+        text = Path("scripts/remote/prepare_apptainer_image.sh").read_text(encoding="utf-8")
+        self.assertIn("validate_sif()", text)
+        self.assertIn("Valid existing SIF found; refusing to rebuild", text)
+        self.assertIn(".partial.${TIMESTAMP}", text)
+        self.assertIn("Moved invalid/interrupted SIF aside", text)
+        self.assertIn("apptainer inspect", text)
+
+    def test_apptainer_prep_builds_locally_then_moves_completed_sif(self) -> None:
+        text = Path("scripts/remote/prepare_apptainer_image.sh").read_text(encoding="utf-8")
+        self.assertIn('LOCAL_SIF_TMP="${APPTAINER_LOCAL_BUILD_DIR}', text)
+        self.assertIn("apptainer pull --force", text)
+        self.assertIn('mv "${LOCAL_SIF_TMP}" "${APPTAINER_PREDICTION_SIF}"', text)
+        self.assertIn("does not run Snakemake", text)
+
+    def test_apptainer_prep_records_sha256_and_inspect_metadata(self) -> None:
+        text = Path("scripts/remote/prepare_apptainer_image.sh").read_text(encoding="utf-8")
+        self.assertIn('SIF_SHA256="${APPTAINER_PREDICTION_SIF}.sha256"', text)
+        self.assertIn('SIF_INSPECT="${APPTAINER_PREDICTION_SIF}.inspect.txt"', text)
+        self.assertIn('sha256sum "${APPTAINER_PREDICTION_SIF}" > "${SIF_SHA256}"', text)
+        self.assertIn('apptainer inspect "${APPTAINER_PREDICTION_SIF}" > "${SIF_INSPECT}"', text)
+
+    def test_paths_template_exposes_apptainer_preparation_knobs(self) -> None:
+        values = parse_env_file(Path("config/remote/paths.example.env"))
+        self.assertIn("APPTAINER_IMAGE_DIR", values)
+        self.assertIn("APPTAINER_PERSISTENT_CACHE_DIR", values)
+        self.assertIn("APPTAINER_PREFIX", values)
+        self.assertIn("APPTAINER_LOCAL_BUILD_DIR", values)
+        self.assertEqual(values["APPTAINER_LOCAL_BUILD_DIR"], "")
+        self.assertEqual(values["APPTAINER_MIN_LOCAL_FREE_GB"], "28")
+        self.assertIn("kosinskilab/alphafold2:2.5.0", values["APPTAINER_PREDICTION_IMAGE"])
+        self.assertEqual(values["APPTAINER_PREDICTION_SIF"], "")
+
+    def test_runpod_checklist_requires_tmux_and_apptainer_prep_before_features(self) -> None:
+        text = Path("docs/operations/RUNPOD_EXECUTION_CHECKLIST.md").read_text(
+            encoding="utf-8"
+        )
+        self.assertIn("tmux new -s alphapulldown", text)
+        self.assertIn("tmux new -s alphapulldown-cpu", text)
+        self.assertIn("tmux new -s alphapulldown-gpu", text)
+        self.assertIn("prepare_apptainer_image.sh --dry-run", text)
+        self.assertLess(text.index("## Phase A - CPU Container Preparation"), text.index("## Phase B - CPU Feature Generation"))
+        self.assertLess(text.index("## Phase B - CPU Feature Generation"), text.index("## Phase C - GPU Inference"))
+        self.assertIn('rsync -avh --progress "${APPTAINER_IMAGE_DIR}/"', text)
+        self.assertIn('rsync -avh --progress "${FEATURE_DIR}/"', text)
+
 def top_level_keys(path: Path) -> set[str]:
     keys: set[str] = set()
     for raw_line in path.read_text(encoding="utf-8").splitlines():
@@ -340,6 +520,14 @@ def top_level_keys(path: Path) -> set[str]:
         if ":" in raw_line:
             keys.add(raw_line.split(":", 1)[0])
     return keys
+
+
+def successful_inspect(command: list[str]) -> subprocess.CompletedProcess[str]:
+    return subprocess.CompletedProcess(command, 0, stdout="ok", stderr="")
+
+
+def failing_inspect(command: list[str]) -> subprocess.CompletedProcess[str]:
+    return subprocess.CompletedProcess(command, 1, stdout="", stderr="bad sif")
 
 
 if __name__ == "__main__":

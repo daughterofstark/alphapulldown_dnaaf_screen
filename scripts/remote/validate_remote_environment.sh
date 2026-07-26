@@ -68,6 +68,24 @@ else fail "Python" "python3 not found"; fi
 if command -v snakemake >/dev/null 2>&1; then ok "Snakemake" "$(snakemake --version)"
 else fail "Snakemake" "not found"; fi
 
+if command -v apptainer >/dev/null 2>&1; then ok "Apptainer" "$(apptainer --version)"
+else fail "Apptainer" "not found"; fi
+
+if [[ -n "${APPTAINER_PREDICTION_SIF:-}" ]]; then
+  if [[ ! -f "${APPTAINER_PREDICTION_SIF}" ]]; then
+    fail "Prediction SIF" "missing: ${APPTAINER_PREDICTION_SIF}"
+  elif [[ ! -s "${APPTAINER_PREDICTION_SIF}" ]]; then
+    fail "Prediction SIF" "empty: ${APPTAINER_PREDICTION_SIF}"
+  elif apptainer inspect "${APPTAINER_PREDICTION_SIF}" >/tmp/ap_sif_inspect.$$ 2>/tmp/ap_sif_inspect_err.$$; then
+    ok "Prediction SIF" "${APPTAINER_PREDICTION_SIF}"
+  else
+    fail "Prediction SIF" "$(cat /tmp/ap_sif_inspect_err.$$ 2>/dev/null || echo inspect failed)"
+  fi
+  rm -f /tmp/ap_sif_inspect.$$ /tmp/ap_sif_inspect_err.$$
+else
+  report "Prediction SIF" "not configured; Snakemake may pull/convert container images"
+fi
+
 if python3 -c 'import alphapulldown_input_parser; print("alphapulldown-input-parser importable")' >/tmp/ap_parser.$$ 2>/tmp/ap_parser_err.$$; then
   ok "Input parser" "$(cat /tmp/ap_parser.$$)"
 else

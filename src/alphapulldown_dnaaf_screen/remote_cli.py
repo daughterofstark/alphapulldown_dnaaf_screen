@@ -17,6 +17,7 @@ from .remote import (
     shell_join,
     stable_run_id,
     validate_accession_files,
+    validate_configured_sif,
     write_resolved_feature_config,
     write_resolved_prediction_config,
 )
@@ -45,15 +46,19 @@ def build_parser() -> argparse.ArgumentParser:
 def feature_command(args: argparse.Namespace) -> int:
     config = load_remote_config(args.config)
     validate_accession_files(config)
+    validate_configured_sif(config)
     run_id = stable_run_id("feature")
     resolved_config, feature_inputs = write_resolved_feature_config(config, run_id=run_id)
     config = replace(config, feature_config=resolved_config)
     command = feature_generation_command(config, dry_run=args.dry_run)
+    provenance_inputs = [config.fasta_manifest, feature_inputs, config.feature_config]
+    if config.apptainer_prediction_sif is not None:
+        provenance_inputs.append(config.apptainer_prediction_sif)
     create_run_provenance(
         config=config,
         run_id=run_id,
         command=command,
-        input_paths=[config.fasta_manifest, feature_inputs, config.feature_config],
+        input_paths=provenance_inputs,
     )
     print(shell_join(command))
     return 0
@@ -61,6 +66,7 @@ def feature_command(args: argparse.Namespace) -> int:
 
 def prediction_command_action(args: argparse.Namespace) -> int:
     config = load_remote_config(args.config)
+    validate_configured_sif(config)
     missing = missing_features(config, args.screen)
     if missing:
         missing_preview = "\n".join(str(path) for path in missing[:20])
@@ -79,11 +85,14 @@ def prediction_command_action(args: argparse.Namespace) -> int:
         dry_run=args.dry_run,
         executor=args.executor,
     )
+    provenance_inputs = [config.prediction_config, config.fasta_manifest, *input_files]
+    if config.apptainer_prediction_sif is not None:
+        provenance_inputs.append(config.apptainer_prediction_sif)
     create_run_provenance(
         config=config,
         run_id=run_id,
         command=command,
-        input_paths=[config.prediction_config, config.fasta_manifest, *input_files],
+        input_paths=provenance_inputs,
     )
     print(shell_join(command))
     return 0

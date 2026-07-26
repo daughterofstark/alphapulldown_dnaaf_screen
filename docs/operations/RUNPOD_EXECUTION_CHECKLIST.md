@@ -1,213 +1,234 @@
 # RunPod Execution Checklist
 
-This checklist is for the first remote AlphaPulldown execution on RunPod. Use a **Pod**, not Serverless. Do not start predictions until the environment validates and dry runs pass.
+This checklist separates container preparation, feature generation, and GPU inference so the A40 pod is used only when GPU inference is actually needed.
 
-## Before Creating the Pod
+Frozen architecture:
 
-Record the planned run:
+- Mac: repository maintenance, input preparation, local review.
+- Cheap x86_64 CPU Linux: AlphaFold2 SIF preparation and optional MMseqs2 feature generation.
+- Persistent storage: completed SIF, checksum, inspect metadata, features, configs, logs, provenance.
+- A40 GPU: inference only, plus optional downstream analysis.
 
-- Git branch: `feature/alphapulldown-implementation`
-- Planned panel: `data/processed/alphapulldown/girish_refined_runpod_first_run.tsv`
-- First biological control to run: human DNAAF18/ODA16-IFT46 negative/species-divergence control
-- First candidate group: Girish-refined multichain jobs marked `include_by_default=true`
+Use `tmux` for every long-running remote command:
+
+```bash
+tmux new -s alphapulldown
+```
+
+## Before Any Remote Machine
 
 Confirm:
 
-- RunPod budget or spending limit.
-- Whether persistent storage/network volume is available.
-- Whether AlphaFold databases will be local, mounted, or unavailable.
-- Whether local database mode or MMseqs2 mode will be used.
+- Git branch: `feature/alphapulldown-implementation`.
+- Planned panel: `data/processed/alphapulldown/girish_refined_runpod_first_run.tsv`.
+- First biological control: human DNAAF18/ODA16-IFT46 negative/species-divergence control.
+- Feature mode: `mmseqs2` unless local AlphaFold databases are explicitly available.
+- Persistent storage location for SIF/features/logs/provenance.
+- Budget for CPU instance and separate A40 GPU pod.
 
-## Create the Pod
+Do not start an A40 pod until Phase A has produced a valid SIF.
 
-1. Create a **Pod**, not a Serverless endpoint.
-2. Choose an official PyTorch/CUDA-capable template.
-3. Select an NVIDIA GPU with sufficient VRAM for the first controls and multichain tests.
-4. Attach persistent storage or a network volume if available.
-5. Choose enough disk space for repository, environment, logs, features, and selected outputs.
-6. Start the pod.
+## Phase A - CPU Container Preparation
+
+Use a cheap x86_64 Linux CPU machine with:
+
+- Apptainer installed.
+- Internet access.
+- At least 35-40 GiB free on local non-FUSE storage for the AlphaFold2 OCI-to-SIF conversion.
+- Persistent storage for the completed SIF and metadata.
+
+Clone the repository:
+
+```bash
+tmux new -s alphapulldown-cpu
+git clone <REPOSITORY_URL> alphapulldown
+cd alphapulldown
+git checkout feature/alphapulldown-implementation
+cp config/remote/paths.example.env config/remote/paths.env
+```
+
+Edit `config/remote/paths.env` for the CPU machine:
+
+```bash
+REMOTE_PROJECT_ROOT="<absolute path to repo>"
+AP_WORKFLOW_DIR="<absolute persistent path>/workflows/AlphaPulldownSnakemake"
+FEATURE_MODE="mmseqs2"
+DATABASES_DIR=""
+BACKEND_WEIGHTS_DIR=""
+
+OUTPUT_DIR="<absolute persistent path>/alphapulldown_results/alphapulldown"
+FEATURE_DIR="${OUTPUT_DIR}/features"
+LOG_DIR="<absolute persistent path>/alphapulldown_results/logs"
+TMP_DIR="<absolute persistent path>/alphapulldown_results/tmp"
+PROVENANCE_DIR="<absolute persistent path>/alphapulldown_results/provenance"
+
+APPTAINER_IMAGE_DIR="<absolute persistent path>/alphapulldown_results/containers"
+APPTAINER_PERSISTENT_CACHE_DIR="<absolute persistent path>/alphapulldown_results/apptainer_cache"
+APPTAINER_PREFIX="${APPTAINER_IMAGE_DIR}/snakemake_apptainer"
+APPTAINER_LOCAL_BUILD_DIR="<absolute local non-FUSE build path>"
+APPTAINER_MIN_LOCAL_FREE_GB="35"
+APPTAINER_PREDICTION_IMAGE="docker://kosinskilab/alphafold2:2.5.0"
+APPTAINER_PREDICTION_SIF="${APPTAINER_IMAGE_DIR}/kosinskilab_alphafold2_2.5.0.sif"
+```
+
+Inspect candidate local filesystems before choosing `APPTAINER_LOCAL_BUILD_DIR`:
+
+```bash
+df -hT /
+df -hT /tmp
+df -hT /dev/shm
+findmnt -T / -no TARGET,FSTYPE,SIZE,AVAIL
+findmnt -T /tmp -no TARGET,FSTYPE,SIZE,AVAIL
+findmnt -T /dev/shm -no TARGET,FSTYPE,SIZE,AVAIL
+findmnt -T <candidate-local-build-path> -no TARGET,FSTYPE,SIZE,AVAIL
+```
+
+Do not use FUSE/network storage for `APPTAINER_LOCAL_BUILD_DIR`. Do not blindly use `/tmp`; on the failed RunPod it shared the same 30 GB overlay as `/`.
+
+Prepare only the container image. This step requires Apptainer but does not
+require Conda, Snakemake, CUDA, or a GPU:
+
+```bash
+cd <repo>
+
+bash scripts/remote/prepare_apptainer_image.sh --dry-run
+bash scripts/remote/prepare_apptainer_image.sh
+```
+
+Required Phase A artifacts:
+
+- `${APPTAINER_PREDICTION_SIF}`
+- `${APPTAINER_PREDICTION_SIF}.sha256`
+- `${APPTAINER_PREDICTION_SIF}.inspect.txt`
+- `config/remote/paths.env` for the CPU machine
+- logs under the configured log/provenance locations
+
+Verify:
+
+```bash
+apptainer inspect "${APPTAINER_PREDICTION_SIF}"
+sha256sum -c "${APPTAINER_PREDICTION_SIF}.sha256"
+```
+
+## Phase B - CPU Feature Generation
+
+Feature generation in MMseqs2 mode is CPU/network work. It should run on the CPU machine after the local SIF exists.
+
+If the CPU machine uses a RunPod-compatible `/workspace` layout, runtime
+tooling can be rebuilt with:
+
+```bash
+bash scripts/remote/rebuild_runpod_runtime.sh --dry-run
+bash scripts/remote/rebuild_runpod_runtime.sh
+```
+
+On a generic Linux CPU VM, use a site/local Miniforge or Mamba installation and
+create the pinned `snake` environment from the AlphaPulldownSnakemake `2.5.0`
+environment YAML. Keep the installation on persistent storage if feature
+generation may be resumed later.
+
+Validate without starting jobs:
+
+```bash
+export PATH="<miniforge>/bin:$PATH"
+source <miniforge>/etc/profile.d/conda.sh
+conda activate snake
+cd <repo>
+
+bash scripts/remote/bootstrap_remote_environment.sh --dry-run
+bash scripts/remote/validate_remote_environment.sh
+bash scripts/remote/run_feature_generation.sh --dry-run
+```
+
+Run feature generation only after the dry run resolves `prediction_container` to the local SIF path, not `docker://kosinskilab/alphafold2:2.5.0`:
+
+```bash
+bash scripts/remote/run_feature_generation.sh
+```
+
+Required Phase B artifacts:
+
+- `${FEATURE_DIR}/*.pkl.xz`
+- resolved feature config under `${PROVENANCE_DIR}/feature-*/feature_generation.config.yaml`
+- feature input file under `${PROVENANCE_DIR}/feature-*/feature_inputs.txt`
+- feature-generation logs under `${LOG_DIR}`
+- provenance under `${PROVENANCE_DIR}`
+- completed SIF and its `.sha256` / `.inspect.txt`
+
+Transfer CPU artifacts to persistent storage or the future GPU pod:
+
+```bash
+rsync -avh --progress "${APPTAINER_IMAGE_DIR}/" <gpu-or-persistent-host>:"${APPTAINER_IMAGE_DIR}/"
+rsync -avh --progress "${FEATURE_DIR}/" <gpu-or-persistent-host>:"${FEATURE_DIR}/"
+rsync -avh --progress "${LOG_DIR}/" <gpu-or-persistent-host>:"${LOG_DIR}/"
+rsync -avh --progress "${PROVENANCE_DIR}/" <gpu-or-persistent-host>:"${PROVENANCE_DIR}/"
+```
+
+Do not transfer Apptainer temporary build directories or OCI extraction directories.
+
+## Phase C - GPU Inference
+
+Start the A40 GPU pod only after Phase A has a valid SIF and Phase B has either completed features or a deliberate decision to generate features elsewhere.
 
 Immediately record for reimbursement:
 
 - Pod ID.
 - GPU type.
 - Hourly rate.
-- Template name.
 - Template/container tag if visible.
 - Volume size.
 - Start time.
 - Screenshot or receipt filename.
 
-## Repository Setup
-
-On the pod:
+On the A40 pod:
 
 ```bash
+tmux new -s alphapulldown-gpu
+cd /workspace
 git clone <REPOSITORY_URL> alphapulldown
-cd alphapulldown
-git checkout feature/alphapulldown-implementation
-```
-
-## Resume After RunPod Host Migration
-
-RunPod host migration can preserve `/workspace` while corrupting executable
-runtime state under `/workspace/miniforge3`. Treat Conda environments as
-rebuildable tooling, not as durable project data. The repository, generated input
-files, reimbursement logs, and previous results should remain separate from the
-runtime.
-
-The recovery script below operates only on runtime/tooling locations under
-`/workspace`: `/workspace/miniforge3`, `/workspace/alphapulldown_runtime`,
-`/workspace/workflows`, and `/workspace/runpod_logs`. It does not run
-AlphaPulldown feature generation or inference.
-
-First inspect what would happen:
-
-```bash
 cd /workspace/alphapulldown
-git status --short --branch
-bash scripts/remote/rebuild_runpod_runtime.sh --dry-run
+git checkout feature/alphapulldown-implementation
+cp config/remote/paths.example.env config/remote/paths.env
 ```
 
-If the dry run only touches runtime/tooling locations, rebuild the runtime:
+Edit `config/remote/paths.env` so the GPU machine points at the transferred artifacts:
 
 ```bash
+FEATURE_MODE="mmseqs2"
+DATABASES_DIR=""
+BACKEND_WEIGHTS_DIR=""
+APPTAINER_PREDICTION_SIF="/workspace/alphapulldown_results/containers/kosinskilab_alphafold2_2.5.0.sif"
+APPTAINER_PREFIX="/workspace/alphapulldown_results/containers/snakemake_apptainer"
+FEATURE_DIR="/workspace/alphapulldown_results/alphapulldown/features"
+OUTPUT_DIR="/workspace/alphapulldown_results/alphapulldown"
+LOG_DIR="/workspace/alphapulldown_results/logs"
+TMP_DIR="/workspace/alphapulldown_results/tmp"
+PROVENANCE_DIR="/workspace/alphapulldown_results/provenance"
+```
+
+If RunPod host migration corrupts Conda, rebuild runtime tooling only:
+
+```bash
+bash scripts/remote/rebuild_runpod_runtime.sh --dry-run
 bash scripts/remote/rebuild_runpod_runtime.sh
 ```
 
-The script checks Miniforge by running Python/Conda/Mamba commands, not by
-trusting directory existence. If `/workspace/miniforge3` is broken, it is moved
-aside to a timestamped `/workspace/miniforge3.broken.<timestamp>` directory and a
-fresh Miniforge is installed. It then recreates:
-
-- `snakedeploy-tools`, containing Snakedeploy and Snakemake.
-- `snake`, the AlphaPulldownSnakemake orchestration environment.
-- `/workspace/alphapulldown_runtime/alphapulldown_snakemake_2.5.0.yaml`, the
-  locally cached pinned upstream environment file.
-- `/workspace/workflows/AlphaPulldownSnakemake`, if the pinned workflow is not
-  already deployed.
-
-The `snake` environment is expected to import `alphapulldown_input_parser`.
-It is **not** expected to import `alphapulldown`; AlphaPulldown itself is supplied
-by the containerized Snakemake workflow at rule runtime.
-
-After rebuilding, validate without starting heavy compute:
+Validate existing SIF/features before inference:
 
 ```bash
 export PATH="/workspace/miniforge3/bin:$PATH"
 source /workspace/miniforge3/etc/profile.d/conda.sh
 conda activate snake
 cd /workspace/alphapulldown
+
+sha256sum -c "${APPTAINER_PREDICTION_SIF}.sha256"
+apptainer inspect "${APPTAINER_PREDICTION_SIF}"
 bash scripts/remote/bootstrap_remote_environment.sh --dry-run
 bash scripts/remote/validate_remote_environment.sh
-bash scripts/remote/run_feature_generation.sh --dry-run
-```
-
-Expected architecture:
-
-- `snakedeploy-tools` provides Snakedeploy/Snakemake deployment tooling.
-- `snake` is the AlphaPulldownSnakemake orchestration environment.
-- AlphaPulldown itself is supplied by Snakemake rule containers, not by importing
-  `alphapulldown` in the orchestration environment.
-- `config/remote/paths.env` should leave `SNAKEMAKE_PROFILE` and `SLURM_PROFILE`
-  empty for single-node RunPod unless real profile directories exist.
-
-Confirm the expected files exist:
-
-```bash
-ls data/processed/screens/girish_refined_first_run_panel.tsv
-ls data/processed/alphapulldown/girish_refined_runpod_first_run.tsv
-```
-
-## Configure Paths
-
-```bash
-cp config/remote/paths.example.env config/remote/paths.env
-```
-
-Edit `config/remote/paths.env` for the pod:
-
-- `REMOTE_PROJECT_ROOT`
-- `AP_WORKFLOW_DIR`
-- `DATABASES_DIR`
-- `BACKEND_WEIGHTS_DIR`
-- `OUTPUT_DIR`
-- `FEATURE_DIR`
-- `LOG_DIR`
-- `TMP_DIR`
-- `PROVENANCE_DIR`
-- `FEATURE_MODE`
-
-Do not commit `paths.env`.
-
-## Bootstrap and Validate
-
-Run bootstrap dry-run:
-
-```bash
-bash scripts/remote/bootstrap_remote_environment.sh --dry-run
-```
-
-If the dry-run is sensible, run bootstrap:
-
-```bash
-bash scripts/remote/bootstrap_remote_environment.sh
-```
-
-Validate the environment:
-
-```bash
-bash scripts/remote/validate_remote_environment.sh
-```
-
-Record:
-
-- Python version.
-- Snakemake version.
-- AlphaPulldown version.
-- CUDA version from `nvidia-smi`.
-- GPU model and memory.
-- Database path validation result.
-
-## Feature Generation
-
-Run feature-generation dry-run:
-
-```bash
-bash scripts/remote/run_feature_generation.sh --dry-run
-```
-
-If the dry-run passes, generate features:
-
-```bash
-bash scripts/remote/run_feature_generation.sh
-```
-
-Save:
-
-- Feature-generation log.
-- Provenance directory.
-- Any warnings about missing databases, MSA generation, or feature output naming.
-
-## Prediction Dry Run
-
-Before prediction, inspect the RunPod panel:
-
-```bash
-column -t -s $'\t' data/processed/alphapulldown/girish_refined_runpod_first_run.tsv | less -S
-```
-
-Run controls dry-run first:
-
-```bash
 bash scripts/remote/run_prediction.sh --screen controls --dry-run
 ```
 
-For Girish-refined jobs, verify the resolved AlphaPulldown specs in the TSV before manually converting them to the remote workflow input file. Multichain rows must remain multichain; do not silently replace them with binary jobs.
-
-## First Prediction Execution
-
-Run controls only first:
+Run controls first:
 
 ```bash
 bash scripts/remote/run_prediction.sh --screen controls
@@ -219,6 +240,7 @@ After controls:
 - Confirm output directories were created.
 - Confirm score/ranking files exist.
 - Confirm no GPU out-of-memory or feature-coverage failures occurred.
+- Stop the pod immediately if infrastructure fails before inference begins.
 
 Only then proceed to Girish-refined candidate jobs marked `include_by_default=true`.
 
@@ -244,7 +266,7 @@ Save:
 - PAE files
 - RunPod receipt or screenshot
 
-## Stop the Pod
+## Stop the GPU Pod
 
 When the run is complete or paused:
 
@@ -256,14 +278,14 @@ When the run is complete or paused:
 
 ## Minimum Run Record
 
-For every RunPod session, record:
+For every CPU or GPU session, record:
 
 - Date.
-- Pod ID.
-- GPU type.
-- Hourly rate.
+- Machine/provider.
+- GPU type, if any.
+- Hourly rate, if any.
 - Start and stop time.
 - Commands run.
 - Outputs generated.
 - Issues encountered.
-- Receipt or screenshot filename.
+- Receipt or screenshot filename, if applicable.

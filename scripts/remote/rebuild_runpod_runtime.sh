@@ -171,7 +171,7 @@ else
   if [[ -d "${MINIFORGE_DIR}/envs/${TOOLS_ENV_NAME}" ]]; then
     run_or_echo "${CONDA_BIN}" env remove -n "${TOOLS_ENV_NAME}" -y
   fi
-  run_or_echo "${ENV_MANAGER}" create -n "${TOOLS_ENV_NAME}" -c conda-forge -y snakedeploy snakemake
+  run_or_echo "${ENV_MANAGER}" create -n "${TOOLS_ENV_NAME}" -c conda-forge -c bioconda -y snakedeploy snakemake
 fi
 
 if [[ ! -f "${AP_ENV_YAML}" ]]; then

@@ -12,6 +12,7 @@ import re
 import subprocess
 from dataclasses import dataclass
 from pathlib import Path
+from typing import Callable
 
 from .provenance import git_metadata, sha256_file
 from .validation import ValidationError, require, validate_accession
@@ -123,6 +124,8 @@ class RemoteConfig:
     backend_weights_dir: Path | None
     feature_mode: str
     feature_pattern: str = DEFAULT_FEATURE_PATTERN
+    apptainer_prediction_sif: Path | None = None
+    apptainer_prefix: Path | None = None
     snakemake_profile: Path | None = None
     slurm_profile: Path | None = None
     snakemake_cores: str = "8"
@@ -141,6 +144,19 @@ class RemoteConfig:
         )
         profile = Path(values["SNAKEMAKE_PROFILE"]) if values.get("SNAKEMAKE_PROFILE") else None
         slurm = Path(values["SLURM_PROFILE"]) if values.get("SLURM_PROFILE") else None
+        apptainer_prediction_sif = (
+            Path(values["APPTAINER_PREDICTION_SIF"])
+            if values.get("APPTAINER_PREDICTION_SIF")
+            else None
+        )
+        if apptainer_prediction_sif is not None:
+            require(
+                apptainer_prediction_sif.is_absolute(),
+                "APPTAINER_PREDICTION_SIF must be an absolute path",
+            )
+        apptainer_prefix = (
+            Path(values["APPTAINER_PREFIX"]) if values.get("APPTAINER_PREFIX") else None
+        )
         output_dir = required_path("OUTPUT_DIR")
         feature_dir = Path(values.get("FEATURE_DIR", str(output_dir / "features")))
         feature_mode = values.get("FEATURE_MODE", "localdb")
@@ -171,6 +187,8 @@ class RemoteConfig:
             backend_weights_dir=backend_weights,
             feature_mode=feature_mode,
             feature_pattern=values.get("FEATURE_FILE_PATTERN", default_pattern),
+            apptainer_prediction_sif=apptainer_prediction_sif,
+            apptainer_prefix=apptainer_prefix,
             snakemake_profile=profile,
             slurm_profile=slurm,
             snakemake_cores=values.get("SNAKEMAKE_CORES", "8"),
@@ -276,6 +294,34 @@ def missing_features(config: RemoteConfig, screen: str) -> list[Path]:
     return [path for path in paths.values() if not path.exists()]
 
 
+InspectRunner = Callable[[list[str]], subprocess.CompletedProcess[str]]
+
+
+def validate_configured_sif(
+    config: RemoteConfig,
+    *,
+    inspect_runner: InspectRunner | None = None,
+) -> None:
+    """Validate a configured production SIF before Snakemake can start."""
+    if config.apptainer_prediction_sif is None:
+        return
+    sif = config.apptainer_prediction_sif
+    require(sif.exists(), f"Configured APPTAINER_PREDICTION_SIF does not exist: {sif}")
+    require(sif.is_file(), f"Configured APPTAINER_PREDICTION_SIF is not a file: {sif}")
+    require(sif.stat().st_size > 0, f"Configured APPTAINER_PREDICTION_SIF is empty: {sif}")
+    runner = inspect_runner or _run_apptainer_inspect
+    result = runner(["apptainer", "inspect", str(sif)])
+    require(
+        result.returncode == 0,
+        "Configured APPTAINER_PREDICTION_SIF failed `apptainer inspect`: "
+        f"{sif}\n{result.stderr.strip()}",
+    )
+
+
+def _run_apptainer_inspect(command: list[str]) -> subprocess.CompletedProcess[str]:
+    return subprocess.run(command, check=False, text=True, capture_output=True)
+
+
 def write_feature_input_file(config: RemoteConfig, output_dir: Path) -> Path:
     manifest = read_fasta_manifest(config.fasta_manifest)
     output_dir.mkdir(parents=True, exist_ok=True)
@@ -340,17 +386,29 @@ def _write_yaml(path: Path, payload: dict[str, object]) -> None:
         prefix = " " * indent
         lines: list[str] = []
         if isinstance(value, dict):
+            if not value:
+                lines.append(f"{prefix}{{}}")
+                return lines
             for key, item in value.items():
                 if isinstance(item, (dict, list)):
-                    lines.append(f"{prefix}{key}:")
-                    lines.extend(emit(item, indent + 2))
+                    if not item:
+                        lines.append(f"{prefix}{key}: {_yaml_scalar_empty(item)}")
+                    else:
+                        lines.append(f"{prefix}{key}:")
+                        lines.extend(emit(item, indent + 2))
                 else:
                     lines.append(f"{prefix}{key}: {_yaml_scalar(item)}")
         elif isinstance(value, list):
+            if not value:
+                lines.append(f"{prefix}[]")
+                return lines
             for item in value:
                 if isinstance(item, (dict, list)):
-                    lines.append(f"{prefix}-")
-                    lines.extend(emit(item, indent + 2))
+                    if not item:
+                        lines.append(f"{prefix}- {_yaml_scalar_empty(item)}")
+                    else:
+                        lines.append(f"{prefix}-")
+                        lines.extend(emit(item, indent + 2))
                 else:
                     lines.append(f"{prefix}- {_yaml_scalar(item)}")
         else:
@@ -361,6 +419,14 @@ def _write_yaml(path: Path, payload: dict[str, object]) -> None:
     path.write_text("\n".join(emit(payload)) + "\n", encoding="utf-8")
 
 
+def _yaml_scalar_empty(value: object) -> str:
+    if isinstance(value, list):
+        return "[]"
+    if isinstance(value, dict):
+        return "{}"
+    return _yaml_scalar(value)
+
+
 def _base_upstream_config(config: RemoteConfig, *, input_files: list[Path]) -> dict[str, object]:
     data_pipeline = "alphafold2" if config.feature_mode == "mmseqs2" else "alphafold3"
     fold_backend = "alphafold2" if config.feature_mode == "mmseqs2" else "alphafold3"
@@ -369,6 +435,8 @@ def _base_upstream_config(config: RemoteConfig, *, input_files: list[Path]) -> d
         if config.feature_mode == "mmseqs2"
         else "docker://kosinskilab/alphafold3:2.5.0"
     )
+    if config.apptainer_prediction_sif is not None:
+        prediction_container = str(config.apptainer_prediction_sif)
     payload: dict[str, object] = {
         "input_files": [str(path) for path in input_files],
         "protein_delimiter": "+",
@@ -456,6 +524,9 @@ def snakemake_base_command(
     snakefile = config.workflow_dir / "workflow" / "Snakefile"
     command.extend(["--snakefile", str(snakefile)])
     command.extend(["--directory", str(config.workflow_dir), "--configfile", str(configfile)])
+    command.extend(["--software-deployment-method", "apptainer"])
+    if config.apptainer_prefix is not None:
+        command.extend(["--apptainer-prefix", str(config.apptainer_prefix)])
     selected_profile = profile if profile is not None else config.snakemake_profile
     if selected_profile:
         command.extend(["--profile", str(selected_profile)])
@@ -528,6 +599,10 @@ def create_run_provenance(
             "backend_weights_dir": str(config.backend_weights_dir)
             if config.backend_weights_dir
             else "",
+            "apptainer_prediction_sif": str(config.apptainer_prediction_sif)
+            if config.apptainer_prediction_sif
+            else "",
+            "apptainer_prefix": str(config.apptainer_prefix) if config.apptainer_prefix else "",
         },
     }
     text = json.dumps(payload, indent=2, sort_keys=True) + "\n"
