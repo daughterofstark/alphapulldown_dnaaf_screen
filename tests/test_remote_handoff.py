@@ -76,6 +76,7 @@ def write_fixture(root: Path) -> Path:
         "\n".join(
             [
                 f"REMOTE_PROJECT_ROOT={root}",
+                "REMOTE_EXECUTION_STAGE=cpu",
                 "AP_WORKFLOW_DIR=${REMOTE_PROJECT_ROOT}/workflow",
                 "AP_ENV_YAML=",
                 "CONDA_ENV_NAME=snake",
@@ -360,9 +361,33 @@ class RemoteHandoffTests(unittest.TestCase):
 
     def test_runpod_defaults_do_not_assume_profiles_or_cluster_jobs(self) -> None:
         values = parse_env_file(Path("config/remote/paths.example.env"))
+        self.assertEqual(values["REMOTE_EXECUTION_STAGE"], "cpu")
+        self.assertEqual(values["REMOTE_PROJECT_ROOT"], "/workspace/alphapulldown")
+        self.assertEqual(values["AP_WORKFLOW_DIR"], "/workspace/workflows/AlphaPulldownSnakemake")
         self.assertEqual(values["SNAKEMAKE_JOBS"], "1")
         self.assertEqual(values["SNAKEMAKE_PROFILE"], "")
         self.assertEqual(values["SLURM_PROFILE"], "")
+
+    def test_bootstrap_stage_controls_nvidia_requirement(self) -> None:
+        text = Path("scripts/remote/bootstrap_remote_environment.sh").read_text(encoding="utf-8")
+        self.assertIn('REMOTE_EXECUTION_STAGE="${REMOTE_EXECUTION_STAGE:-gpu}"', text)
+        self.assertIn('REMOTE_EXECUTION_STAGE=cpu: NVIDIA GPU/nvidia-smi is not required.', text)
+        self.assertIn("nvidia-smi is required for REMOTE_EXECUTION_STAGE=gpu", text)
+        self.assertIn("GPU: not detected; allowed for REMOTE_EXECUTION_STAGE=cpu", text)
+
+    def test_validator_reports_gpu_not_required_for_cpu_stage(self) -> None:
+        text = Path("scripts/remote/validate_remote_environment.sh").read_text(encoding="utf-8")
+        self.assertIn('REMOTE_EXECUTION_STAGE="${REMOTE_EXECUTION_STAGE:-gpu}"', text)
+        self.assertIn('report "Execution stage" "${REMOTE_EXECUTION_STAGE}"', text)
+        self.assertIn("not required for REMOTE_EXECUTION_STAGE=cpu", text)
+        self.assertIn("not found; required for REMOTE_EXECUTION_STAGE=gpu", text)
+        self.assertIn("not required for CPU stage", text)
+
+    def test_prediction_requires_gpu_stage_and_nvidia(self) -> None:
+        text = Path("scripts/remote/run_prediction.sh").read_text(encoding="utf-8")
+        self.assertIn('REMOTE_EXECUTION_STAGE="${REMOTE_EXECUTION_STAGE:-gpu}"', text)
+        self.assertIn("run_prediction.sh requires REMOTE_EXECUTION_STAGE=gpu", text)
+        self.assertIn("nvidia-smi is required for GPU prediction/inference", text)
 
     def test_bootstrap_supports_local_pinned_env_yaml(self) -> None:
         text = Path("scripts/remote/bootstrap_remote_environment.sh").read_text(encoding="utf-8")
@@ -511,6 +536,15 @@ class RemoteHandoffTests(unittest.TestCase):
         self.assertLess(text.index("## Phase B - CPU Feature Generation"), text.index("## Phase C - GPU Inference"))
         self.assertIn('rsync -avh --progress "${APPTAINER_IMAGE_DIR}/"', text)
         self.assertIn('rsync -avh --progress "${FEATURE_DIR}/"', text)
+
+    def test_runpod_checklist_documents_cpu_stage_and_apptainer_install(self) -> None:
+        text = Path("docs/operations/RUNPOD_EXECUTION_CHECKLIST.md").read_text(
+            encoding="utf-8"
+        )
+        self.assertIn("apt-get install -y ./apptainer_1.5.3_amd64.deb", text)
+        self.assertIn('REMOTE_EXECUTION_STAGE="cpu"', text)
+        self.assertIn("/workspace/alphapulldown/results/containers/kosinskilab_alphafold2_2.5.0.sif", text)
+        self.assertIn('REMOTE_EXECUTION_STAGE="gpu"', text)
 
 def top_level_keys(path: Path) -> set[str]:
     keys: set[str] = set()

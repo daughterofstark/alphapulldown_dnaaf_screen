@@ -34,6 +34,14 @@ done
 
 load_remote_env "${REMOTE_ENV_FILE}"
 require_linux
+REMOTE_EXECUTION_STAGE="${REMOTE_EXECUTION_STAGE:-gpu}"
+case "${REMOTE_EXECUTION_STAGE}" in
+  cpu|gpu) ;;
+  *)
+    echo "REMOTE_EXECUTION_STAGE must be cpu or gpu, got: ${REMOTE_EXECUTION_STAGE}" >&2
+    exit 2
+    ;;
+esac
 
 FAILURES=0
 report() { printf '%-32s %s\n' "$1" "$2"; }
@@ -42,6 +50,7 @@ ok() { report "$1" "OK: $2"; }
 
 report "OS" "$(uname -srm)"
 report "Architecture" "$(uname -m)"
+report "Execution stage" "${REMOTE_EXECUTION_STAGE}"
 
 HAS_ENV_MANAGER=0
 if command -v mamba >/dev/null 2>&1; then
@@ -103,7 +112,12 @@ if command -v nvidia-smi >/dev/null 2>&1; then
   ok "nvidia-smi" "$(nvidia-smi --query-gpu=name,memory.total --format=csv,noheader | paste -sd ';' -)"
   report "CUDA" "$(nvidia-smi | sed -n 's/.*CUDA Version: \([^ ]*\).*/\1/p' | head -1)"
 else
-  fail "nvidia-smi" "not found"
+  if [[ "${REMOTE_EXECUTION_STAGE}" == "gpu" ]]; then
+    fail "nvidia-smi" "not found; required for REMOTE_EXECUTION_STAGE=gpu"
+  else
+    report "nvidia-smi" "not found; not required for REMOTE_EXECUTION_STAGE=cpu"
+    report "CUDA" "not required for CPU stage"
+  fi
 fi
 
 if [[ "${FEATURE_MODE:-localdb}" == "localdb" ]]; then

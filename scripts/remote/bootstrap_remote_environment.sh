@@ -39,6 +39,14 @@ done
 
 load_remote_env "${REMOTE_ENV_FILE}"
 require_linux
+REMOTE_EXECUTION_STAGE="${REMOTE_EXECUTION_STAGE:-gpu}"
+case "${REMOTE_EXECUTION_STAGE}" in
+  cpu|gpu) ;;
+  *)
+    echo "REMOTE_EXECUTION_STAGE must be cpu or gpu, got: ${REMOTE_EXECUTION_STAGE}" >&2
+    exit 2
+    ;;
+esac
 
 case "$(uname -m)" in
   x86_64|aarch64) ;;
@@ -48,9 +56,13 @@ case "$(uname -m)" in
     ;;
 esac
 
-if ! command -v nvidia-smi >/dev/null 2>&1; then
-  echo "nvidia-smi is required for the GPU inference host." >&2
-  exit 2
+if [[ "${REMOTE_EXECUTION_STAGE}" == "gpu" ]]; then
+  if ! command -v nvidia-smi >/dev/null 2>&1; then
+    echo "nvidia-smi is required for REMOTE_EXECUTION_STAGE=gpu." >&2
+    exit 2
+  fi
+else
+  echo "REMOTE_EXECUTION_STAGE=cpu: NVIDIA GPU/nvidia-smi is not required."
 fi
 
 if ! command -v apptainer >/dev/null 2>&1; then
@@ -79,7 +91,12 @@ ensure_dir "${BOOTSTRAP_PROVENANCE}"
 echo "Remote host: $(hostname)"
 echo "Linux: $(uname -a)"
 echo "Architecture: $(uname -m)"
-nvidia-smi --query-gpu=name,memory.total,driver_version --format=csv,noheader || true
+echo "Execution stage: ${REMOTE_EXECUTION_STAGE}"
+if command -v nvidia-smi >/dev/null 2>&1; then
+  nvidia-smi --query-gpu=name,memory.total,driver_version --format=csv,noheader || true
+else
+  echo "GPU: not detected; allowed for REMOTE_EXECUTION_STAGE=cpu"
+fi
 
 ENV_URL="https://raw.githubusercontent.com/KosinskiLab/AlphaPulldownSnakemake/${AP_SNAKEMAKE_VERSION}/workflow/envs/alphapulldown.yaml"
 ENV_SOURCE="${ENV_URL}"
@@ -113,9 +130,14 @@ fi
   echo "conda_env_name=${CONDA_ENV_NAME}"
   echo "alphapulldown_snakemake_version=${AP_SNAKEMAKE_VERSION}"
   echo "workflow_dir=${AP_WORKFLOW_DIR}"
+  echo "remote_execution_stage=${REMOTE_EXECUTION_STAGE}"
   echo "python=$({ command -v python3 && python3 --version; } 2>&1 | tr '\n' ' ')"
   echo "snakemake=$({ command -v snakemake && snakemake --version; } 2>&1 | tr '\n' ' ')"
-  echo "gpu=$({ nvidia-smi --query-gpu=name,memory.total --format=csv,noheader; } 2>&1 | tr '\n' ';')"
+  if command -v nvidia-smi >/dev/null 2>&1; then
+    echo "gpu=$({ nvidia-smi --query-gpu=name,memory.total --format=csv,noheader; } 2>&1 | tr '\n' ';')"
+  else
+    echo "gpu=not detected; not required for REMOTE_EXECUTION_STAGE=cpu"
+  fi
 } > "${BOOTSTRAP_PROVENANCE}/bootstrap_versions.txt"
 
 echo "Bootstrap provenance: ${BOOTSTRAP_PROVENANCE}"

@@ -55,6 +55,15 @@ fi
 
 load_remote_env "${REMOTE_ENV_FILE}"
 require_linux
+REMOTE_EXECUTION_STAGE="${REMOTE_EXECUTION_STAGE:-gpu}"
+if [[ "${REMOTE_EXECUTION_STAGE}" != "gpu" ]]; then
+  echo "run_prediction.sh requires REMOTE_EXECUTION_STAGE=gpu." >&2
+  exit 2
+fi
+if ! command -v nvidia-smi >/dev/null 2>&1; then
+  echo "nvidia-smi is required for GPU prediction/inference." >&2
+  exit 2
+fi
 ensure_dir "${OUTPUT_DIR:?OUTPUT_DIR must be set}"
 ensure_dir "${LOG_DIR:?LOG_DIR must be set}"
 ensure_dir "${PROVENANCE_DIR:?PROVENANCE_DIR must be set}"

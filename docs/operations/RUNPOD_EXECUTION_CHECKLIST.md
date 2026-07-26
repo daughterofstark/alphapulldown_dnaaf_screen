@@ -37,6 +37,17 @@ Use a cheap x86_64 Linux CPU machine with:
 - At least 35-40 GiB free on local non-FUSE storage for the AlphaFold2 OCI-to-SIF conversion.
 - Persistent storage for the completed SIF and metadata.
 
+Fresh RunPod Ubuntu CPU pods do not include Apptainer. Install it before Phase A
+container preparation:
+
+```bash
+cd /tmp
+wget -O apptainer_1.5.3_amd64.deb \
+  https://github.com/apptainer/apptainer/releases/download/v1.5.3/apptainer_1.5.3_amd64.deb
+apt-get install -y ./apptainer_1.5.3_amd64.deb
+apptainer --version
+```
+
 Clone the repository:
 
 ```bash
@@ -52,6 +63,7 @@ Edit `config/remote/paths.env` for the CPU machine:
 ```bash
 REMOTE_PROJECT_ROOT="<absolute path to repo>"
 AP_WORKFLOW_DIR="<absolute persistent path>/workflows/AlphaPulldownSnakemake"
+REMOTE_EXECUTION_STAGE="cpu"
 FEATURE_MODE="mmseqs2"
 DATABASES_DIR=""
 BACKEND_WEIGHTS_DIR=""
@@ -97,7 +109,9 @@ bash scripts/remote/prepare_apptainer_image.sh
 
 Required Phase A artifacts:
 
-- `${APPTAINER_PREDICTION_SIF}`
+- `${APPTAINER_PREDICTION_SIF}`; the verified RunPod CPU build produced
+  `/workspace/alphapulldown/results/containers/kosinskilab_alphafold2_2.5.0.sif`
+  at 6.9 GB from `kosinskilab/alphafold2:2.5.0` for `amd64`.
 - `${APPTAINER_PREDICTION_SIF}.sha256`
 - `${APPTAINER_PREDICTION_SIF}.inspect.txt`
 - `config/remote/paths.env` for the CPU machine
@@ -138,6 +152,24 @@ cd <repo>
 bash scripts/remote/bootstrap_remote_environment.sh --dry-run
 bash scripts/remote/validate_remote_environment.sh
 bash scripts/remote/run_feature_generation.sh --dry-run
+```
+
+For the completed RunPod CPU Phase A, `config/remote/paths.env` should include:
+
+```bash
+REMOTE_EXECUTION_STAGE="cpu"
+REMOTE_PROJECT_ROOT="/workspace/alphapulldown"
+AP_WORKFLOW_DIR="/workspace/workflows/AlphaPulldownSnakemake"
+FEATURE_MODE="mmseqs2"
+DATABASES_DIR=""
+BACKEND_WEIGHTS_DIR=""
+APPTAINER_PREDICTION_SIF="/workspace/alphapulldown/results/containers/kosinskilab_alphafold2_2.5.0.sif"
+APPTAINER_PREFIX="/workspace/alphapulldown/results/containers/snakemake_apptainer"
+FEATURE_DIR="/workspace/alphapulldown/results/alphapulldown/features"
+OUTPUT_DIR="/workspace/alphapulldown/results/alphapulldown"
+LOG_DIR="/workspace/alphapulldown/results/logs"
+TMP_DIR="/workspace/alphapulldown/results/tmp"
+PROVENANCE_DIR="/workspace/alphapulldown/results/provenance"
 ```
 
 Run feature generation only after the dry run resolves `prediction_container` to the local SIF path, not `docker://kosinskilab/alphafold2:2.5.0`:
@@ -195,6 +227,7 @@ Edit `config/remote/paths.env` so the GPU machine points at the transferred arti
 
 ```bash
 FEATURE_MODE="mmseqs2"
+REMOTE_EXECUTION_STAGE="gpu"
 DATABASES_DIR=""
 BACKEND_WEIGHTS_DIR=""
 APPTAINER_PREDICTION_SIF="/workspace/alphapulldown_results/containers/kosinskilab_alphafold2_2.5.0.sif"
