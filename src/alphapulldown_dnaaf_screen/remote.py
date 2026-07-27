@@ -20,6 +20,12 @@ from .validation import ValidationError, require, validate_accession
 SUPPORTED_SCREENS = {"controls", "transport", "full", "milestone2"}
 SUPPORTED_FEATURE_MODES = {"localdb", "mmseqs2"}
 DEFAULT_FEATURE_PATTERN = "{record_id}_af3_input.json"
+UPSTREAM_CLI_ARGUMENT_KEYS = {
+    "create_feature_arguments",
+    "structure_inference_arguments",
+    "analyze_structure_arguments",
+    "recursive_report_arguments",
+}
 UPSTREAM_CONFIG_KEYS = {
     "input_files",
     "protein_delimiter",
@@ -514,6 +520,9 @@ def _write_yaml(path: Path, payload: dict[str, object]) -> None:
                 lines.append(f"{prefix}{{}}")
                 return lines
             for key, item in value.items():
+                if key in UPSTREAM_CLI_ARGUMENT_KEYS and isinstance(item, dict):
+                    lines.append(f"{prefix}{key}: {_yaml_inline_dict(item)}")
+                    continue
                 if isinstance(item, (dict, list)):
                     if not item:
                         lines.append(f"{prefix}{key}: {_yaml_scalar_empty(item)}")
@@ -541,6 +550,15 @@ def _write_yaml(path: Path, payload: dict[str, object]) -> None:
 
     path.parent.mkdir(parents=True, exist_ok=True)
     path.write_text("\n".join(emit(payload)) + "\n", encoding="utf-8")
+
+
+def _yaml_inline_dict(value: dict[object, object]) -> str:
+    if not value:
+        return "{}"
+    parts = []
+    for key, item in value.items():
+        parts.append(f"{_yaml_scalar(key)}: {_yaml_scalar(item)}")
+    return "{" + ", ".join(parts) + "}"
 
 
 def _yaml_scalar_empty(value: object) -> str:
