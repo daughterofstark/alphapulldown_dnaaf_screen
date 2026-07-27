@@ -649,8 +649,10 @@ def _base_upstream_config(config: RemoteConfig, *, input_files: list[Path]) -> d
     if config.feature_mode == "mmseqs2":
         feature_args = payload["create_feature_arguments"]
         require(isinstance(feature_args, dict), "Internal error: feature args must be a dict")
-        feature_args["--use_mmseqs2"] = True
-        feature_args["--skip_existing"] = True
+        feature_args.pop("--data_pipeline", None)
+        feature_args["--compress_features"] = (
+            "True --data_pipeline=alphafold2 --use_mmseqs2=True --skip_existing=True"
+        )
     for name in [
         "create_feature_arguments",
         "structure_inference_arguments",

@@ -202,8 +202,13 @@ class RemoteHandoffTests(unittest.TestCase):
             self.assertEqual(config.feature_pattern, "{record_id}.pkl.xz")
             path, _ = write_resolved_feature_config(config, run_id="feature-mmseqs2")
             resolved = path.read_text()
-            self.assertIn('"--data_pipeline": "alphafold2"', resolved)
-            self.assertIn('"--use_mmseqs2": true', resolved)
+            self.assertIn(
+                '"--compress_features": "True --data_pipeline=alphafold2 '
+                '--use_mmseqs2=True --skip_existing=True"',
+                resolved,
+            )
+            self.assertNotIn('"--data_pipeline": "alphafold2"', resolved)
+            self.assertNotIn('"--use_mmseqs2": true', resolved)
             self.assertIn("docker://kosinskilab/alphafold2:2.5.0", resolved)
 
     def test_configured_sif_path_is_emitted_into_feature_config(self) -> None:
@@ -442,19 +447,16 @@ class RemoteHandoffTests(unittest.TestCase):
             create_line = next(
                 line for line in resolved.splitlines() if line.startswith("create_feature_arguments:")
             )
-            self.assertIn('"--data_pipeline": "alphafold2"', create_line)
-            self.assertIn('"--use_mmseqs2": true', create_line)
-            self.assertIn('"--skip_existing": true', create_line)
+            self.assertIn(
+                '"--compress_features": "True --data_pipeline=alphafold2 '
+                '--use_mmseqs2=True --skip_existing=True"',
+                create_line,
+            )
+            self.assertNotIn('"--data_pipeline": "alphafold2"', create_line)
+            self.assertNotIn('"--use_mmseqs2": true', create_line)
+            self.assertNotIn('"--skip_existing": true', create_line)
             self.assertNotIn("\n", create_line)
-            args = {
-                "--save_msa_files": False,
-                "--use_precomputed_msas": True,
-                "--max_template_date": "2050-01-01",
-                "--compress_features": True,
-                "--data_pipeline": "alphafold2",
-                "--use_mmseqs2": True,
-                "--skip_existing": True,
-            }
+            args = parse_inline_argument_map(create_line)
             rendered = upstream_cli_parameters(args)
             self.assertNotIn("\n", rendered)
             self.assertIn("--data_pipeline=alphafold2 --use_mmseqs2=True", rendered)
@@ -616,6 +618,41 @@ def top_level_keys(path: Path) -> set[str]:
         if ":" in raw_line:
             keys.add(raw_line.split(":", 1)[0])
     return keys
+
+
+def parse_inline_argument_map(line: str) -> dict[str, object]:
+    body = line.split(":", 1)[1].strip()
+    assert body.startswith("{") and body.endswith("}")
+    inner = body[1:-1]
+    fields: list[str] = []
+    current = []
+    in_quote = False
+    index = 0
+    while index < len(inner):
+        char = inner[index]
+        if char == '"' and (index == 0 or inner[index - 1] != "\\"):
+            in_quote = not in_quote
+        if char == "," and not in_quote:
+            fields.append("".join(current).strip())
+            current = []
+        else:
+            current.append(char)
+        index += 1
+    if current:
+        fields.append("".join(current).strip())
+
+    parsed: dict[str, object] = {}
+    for field in fields:
+        key, value = field.split(": ", 1)
+        key = key.strip().strip('"')
+        value = value.strip()
+        if value == "true":
+            parsed[key] = True
+        elif value == "false":
+            parsed[key] = False
+        else:
+            parsed[key] = value.strip('"')
+    return parsed
 
 
 def successful_inspect(command: list[str]) -> subprocess.CompletedProcess[str]:
