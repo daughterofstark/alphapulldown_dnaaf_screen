@@ -11,6 +11,7 @@ from alphapulldown_dnaaf_screen.remote import (
     accessions_for_screen,
     load_remote_config,
     missing_features,
+    pinned_workflow_feature_plan,
     prediction_command,
     write_resolved_feature_config,
     write_resolved_prediction_config,
@@ -213,6 +214,30 @@ class Milestone2BenchmarkTests(unittest.TestCase):
             self.assertIn("feature_inputs.txt", text)
             self.assertNotIn("data/processed/fasta/fasta_manifest.tsv", text)
 
+    def test_milestone2_resolved_feature_config_uses_pinned_af2_mmseqs2_semantics(self) -> None:
+        """Exercise the 2.5.0 Snakefile selectors against the full resolved config."""
+        with tempfile.TemporaryDirectory() as tmp:
+            config = benchmark_remote_config(Path(tmp))
+            path, _ = write_resolved_feature_config(config, run_id="feature-m2-af2")
+            resolved = path.read_text(encoding="utf-8")
+            create_line = next(
+                line for line in resolved.splitlines() if line.startswith("create_feature_arguments:")
+            )
+            arguments = parse_inline_argument_map(create_line)
+            plan = pinned_workflow_feature_plan(arguments)
+
+            self.assertEqual(plan.data_pipeline, "alphafold2")
+            self.assertFalse(plan.is_af3)
+            self.assertEqual(plan.feature_name("HUMAN_IFT80"), "HUMAN_IFT80.pkl.xz")
+            self.assertEqual(
+                plan.cli_parameters,
+                "--save_msa_files=False --use_precomputed_msas=True "
+                "--max_template_date=2050-01-01 --compress_features=True "
+                "--data_pipeline=alphafold2 --use_mmseqs2=True --skip_existing=True",
+            )
+            self.assertNotIn("alphafold3", resolved.lower())
+            self.assertNotIn("_af3_input.json", resolved)
+
     def test_remote_prediction_config_writes_eight_milestone2_jobs(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
             config = benchmark_remote_config(Path(tmp))
@@ -225,6 +250,10 @@ class Milestone2BenchmarkTests(unittest.TestCase):
             self.assertIn("HUMAN_DNAAF18.fasta+/", lines[0] + "/")
             self.assertNotIn("chlamy", inputs[0].read_text(encoding="utf-8").lower())
             self.assertIn("prediction.milestone2.config.yaml", str(path))
+            resolved = path.read_text(encoding="utf-8")
+            self.assertIn(f'- "{config.feature_dir}"', resolved)
+            self.assertNotIn("alphafold3", resolved.lower())
+            self.assertNotIn("_af3_input.json", resolved)
 
     def test_milestone2_prediction_command_is_selectable_and_full_remains_blocked(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
@@ -269,6 +298,38 @@ def read_tsv(path: Path) -> list[dict[str, str]]:
 
     with path.open(encoding="utf-8", newline="") as handle:
         return list(csv.DictReader(handle, delimiter="\t"))
+
+
+def parse_inline_argument_map(line: str) -> dict[str, object]:
+    """Read the wrapper's one-line YAML map without adding a YAML dependency."""
+    body = line.split(":", 1)[1].strip()
+    assert body.startswith("{") and body.endswith("}")
+    fields: list[str] = []
+    current: list[str] = []
+    in_quote = False
+    for index, char in enumerate(body[1:-1]):
+        previous = body[index] if index else ""
+        if char == '"' and previous != "\\":
+            in_quote = not in_quote
+        if char == "," and not in_quote:
+            fields.append("".join(current).strip())
+            current = []
+        else:
+            current.append(char)
+    if current:
+        fields.append("".join(current).strip())
+
+    parsed: dict[str, object] = {}
+    for field in fields:
+        key, value = field.split(": ", 1)
+        value = value.strip()
+        if value == "true":
+            parsed[key.strip('"')] = True
+        elif value == "false":
+            parsed[key.strip('"')] = False
+        else:
+            parsed[key.strip('"')] = value.strip('"')
+    return parsed
 
 
 def benchmark_remote_config(tmp_path: Path):

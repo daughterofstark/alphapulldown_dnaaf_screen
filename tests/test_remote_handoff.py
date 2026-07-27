@@ -17,11 +17,13 @@ from alphapulldown_dnaaf_screen.remote import (
     missing_features,
     parse_env_file,
     prediction_command,
+    pinned_workflow_feature_plan,
     require_linux,
     stable_run_id,
     snakemake_base_command,
     upstream_cli_parameters,
     validate_configured_sif,
+    validate_feature_execution_model,
     write_resolved_feature_config,
     write_resolved_prediction_config,
 )
@@ -202,13 +204,11 @@ class RemoteHandoffTests(unittest.TestCase):
             self.assertEqual(config.feature_pattern, "{record_id}.pkl.xz")
             path, _ = write_resolved_feature_config(config, run_id="feature-mmseqs2")
             resolved = path.read_text()
-            self.assertIn(
-                '"--compress_features": "True --data_pipeline=alphafold2 '
-                '--use_mmseqs2=True --skip_existing=True"',
-                resolved,
-            )
-            self.assertNotIn('"--data_pipeline": "alphafold2"', resolved)
-            self.assertNotIn('"--use_mmseqs2": true', resolved)
+            self.assertIn('"--data_pipeline": "alphafold2"', resolved)
+            self.assertIn('"--use_mmseqs2": true', resolved)
+            self.assertIn('"--skip_existing": true', resolved)
+            self.assertNotIn("alphafold3", resolved.lower())
+            self.assertNotIn("_af3_input.json", resolved)
             self.assertIn("docker://kosinskilab/alphafold2:2.5.0", resolved)
 
     def test_configured_sif_path_is_emitted_into_feature_config(self) -> None:
@@ -219,6 +219,7 @@ class RemoteHandoffTests(unittest.TestCase):
             env.write_text(
                 env.read_text()
                 .replace("FEATURE_MODE=localdb", "FEATURE_MODE=mmseqs2")
+                .replace("FEATURE_FILE_PATTERN={record_id}_af3_input.json\n", "")
                 + f"APPTAINER_PREDICTION_SIF={sif}\n"
             )
             config = load_remote_config(env)
@@ -235,6 +236,7 @@ class RemoteHandoffTests(unittest.TestCase):
             env.write_text(
                 env.read_text()
                 .replace("FEATURE_MODE=localdb", "FEATURE_MODE=mmseqs2")
+                .replace("FEATURE_FILE_PATTERN={record_id}_af3_input.json\n", "")
                 + f"APPTAINER_PREDICTION_SIF={sif}\n"
             )
             config = load_remote_config(env)
@@ -447,20 +449,20 @@ class RemoteHandoffTests(unittest.TestCase):
             create_line = next(
                 line for line in resolved.splitlines() if line.startswith("create_feature_arguments:")
             )
-            self.assertIn(
-                '"--compress_features": "True --data_pipeline=alphafold2 '
-                '--use_mmseqs2=True --skip_existing=True"',
-                create_line,
-            )
-            self.assertNotIn('"--data_pipeline": "alphafold2"', create_line)
-            self.assertNotIn('"--use_mmseqs2": true', create_line)
-            self.assertNotIn('"--skip_existing": true', create_line)
+            self.assertIn('"--data_pipeline": "alphafold2"', create_line)
+            self.assertIn('"--use_mmseqs2": true', create_line)
+            self.assertIn('"--skip_existing": true', create_line)
             self.assertNotIn("\n", create_line)
             args = parse_inline_argument_map(create_line)
-            rendered = upstream_cli_parameters(args)
+            plan = pinned_workflow_feature_plan(args)
+            rendered = plan.cli_parameters
             self.assertNotIn("\n", rendered)
-            self.assertIn("--data_pipeline=alphafold2 --use_mmseqs2=True", rendered)
+            self.assertIn("--data_pipeline=alphafold2", rendered)
+            self.assertIn("--use_mmseqs2=True", rendered)
             self.assertTrue(rendered.endswith("--skip_existing=True"))
+            self.assertEqual(plan.data_pipeline, "alphafold2")
+            self.assertFalse(plan.is_af3)
+            self.assertEqual(plan.feature_name("HUMAN_IFT80"), "HUMAN_IFT80.pkl.xz")
             shell_command = (
                 "create_individual_features.py \\\n"
                 "  --fasta_paths=input.fasta \\\n"
@@ -474,6 +476,30 @@ class RemoteHandoffTests(unittest.TestCase):
             )
             self.assertNotIn("\n--use_mmseqs2=True", shell_command)
             self.assertNotIn("\n--skip_existing=True", shell_command)
+
+    def test_mmseqs2_preflight_rejects_af2_af3_mixture(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            env = write_fixture(Path(tmp))
+            text = env.read_text().replace("FEATURE_MODE=localdb", "FEATURE_MODE=mmseqs2")
+            text = text.replace("FEATURE_FILE_PATTERN={record_id}_af3_input.json\n", "")
+            env.write_text(text)
+            config = load_remote_config(env)
+            validate_feature_execution_model(config)
+
+            with mock.patch(
+                "alphapulldown_dnaaf_screen.remote._base_upstream_config",
+                return_value={
+                    "create_feature_arguments": {
+                        "--compress_features": True,
+                        "--data_pipeline": "alphafold3",
+                        "--use_mmseqs2": True,
+                        "--skip_existing": True,
+                    },
+                    "structure_inference_arguments": {"--fold_backend": "alphafold3"},
+                },
+            ):
+                with self.assertRaisesRegex(ValidationError, "alphafold2"):
+                    validate_feature_execution_model(config)
 
     def test_feature_argument_newlines_are_rejected_before_snakemake(self) -> None:
         with self.assertRaises(ValidationError):

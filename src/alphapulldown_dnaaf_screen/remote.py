@@ -20,6 +20,7 @@ from .validation import ValidationError, require, validate_accession
 SUPPORTED_SCREENS = {"controls", "transport", "full", "milestone2"}
 SUPPORTED_FEATURE_MODES = {"localdb", "mmseqs2"}
 DEFAULT_FEATURE_PATTERN = "{record_id}_af3_input.json"
+MMS2_AF2_FEATURE_PATTERN = "{record_id}.pkl.xz"
 UPSTREAM_CLI_ARGUMENT_KEYS = {
     "create_feature_arguments",
     "structure_inference_arguments",
@@ -590,7 +591,109 @@ def upstream_cli_parameters(arguments: dict[str, object]) -> str:
     return " ".join([f"{key}={value}" for key, value in arguments.items()])
 
 
-def _base_upstream_config(config: RemoteConfig, *, input_files: list[Path]) -> dict[str, object]:
+@dataclass(frozen=True)
+class PinnedWorkflowFeaturePlan:
+    """Feature-target semantics from AlphaPulldownSnakemake 2.5.0's Snakefile."""
+
+    data_pipeline: str
+    is_af3: bool
+    feature_output_pattern: str
+    cli_parameters: str
+
+    def feature_name(self, fasta_basename: str) -> str:
+        if self.is_af3:
+            return f"{fasta_basename}_af3_input.json"
+        return self.feature_output_pattern.format(fasta_basename=fasta_basename)
+
+
+def pinned_workflow_feature_plan(
+    create_feature_arguments: dict[str, object],
+) -> PinnedWorkflowFeaturePlan:
+    """Apply the 2.5.0 Snakefile's AF2/AF3 feature-selection logic.
+
+    The pinned workflow selects the target before rules run from
+    ``--data_pipeline`` and renders feature CLI parameters by joining the
+    argument mapping as ``flag=value`` tokens. Keeping this mirror here lets
+    the wrapper reject incompatible resolved configurations before Snakemake
+    creates a job graph.
+    """
+
+    _validate_cli_argument_map("create_feature_arguments", create_feature_arguments)
+    data_pipeline = str(
+        create_feature_arguments.get("--data_pipeline", "alphafold2")
+    ).lower()
+    is_af3 = data_pipeline in {"alphafold3", "af3"}
+    if is_af3:
+        feature_output_pattern = "{fasta_basename}_af3_input.json"
+    else:
+        compression = create_feature_arguments.get("--compress_features", False)
+        feature_output_pattern = (
+            "{fasta_basename}.pkl.xz" if compression else "{fasta_basename}.pkl"
+        )
+    return PinnedWorkflowFeaturePlan(
+        data_pipeline=data_pipeline,
+        is_af3=is_af3,
+        feature_output_pattern=feature_output_pattern,
+        cli_parameters=upstream_cli_parameters(create_feature_arguments),
+    )
+
+
+def _validate_mmseqs2_af2_payload(payload: dict[str, object], config: RemoteConfig) -> None:
+    """Reject AF2/AF3 mixture before the pinned workflow is invoked."""
+
+    feature_args = payload.get("create_feature_arguments")
+    inference_args = payload.get("structure_inference_arguments")
+    require(isinstance(feature_args, dict), "Resolved feature config has no argument map")
+    require(isinstance(inference_args, dict), "Resolved feature config has no inference map")
+    plan = pinned_workflow_feature_plan(feature_args)
+    require(
+        plan.data_pipeline == "alphafold2",
+        "FEATURE_MODE=mmseqs2 requires --data_pipeline=alphafold2; "
+        f"resolved value is {plan.data_pipeline!r}",
+    )
+    require(not plan.is_af3, "FEATURE_MODE=mmseqs2 must not select AlphaFold3 feature targets")
+    require(
+        plan.feature_output_pattern == "{fasta_basename}.pkl.xz",
+        "FEATURE_MODE=mmseqs2 requires compressed AlphaFold2 .pkl.xz features",
+    )
+    require(
+        feature_args.get("--use_mmseqs2") is True,
+        "FEATURE_MODE=mmseqs2 requires --use_mmseqs2=True",
+    )
+    require(
+        feature_args.get("--skip_existing") is True,
+        "FEATURE_MODE=mmseqs2 requires --skip_existing=True",
+    )
+    require(
+        inference_args.get("--fold_backend") == "alphafold2",
+        "FEATURE_MODE=mmseqs2 requires --fold_backend=alphafold2",
+    )
+    require(
+        config.feature_pattern == MMS2_AF2_FEATURE_PATTERN,
+        "FEATURE_MODE=mmseqs2 requires FEATURE_FILE_PATTERN={record_id}.pkl.xz",
+    )
+
+    serialized = json.dumps(payload, sort_keys=True).lower()
+    require(
+        "alphafold3" not in serialized and "_af3_input.json" not in serialized,
+        "FEATURE_MODE=mmseqs2 resolved config mixes AlphaFold2 and AlphaFold3 settings",
+    )
+
+
+def validate_feature_execution_model(config: RemoteConfig) -> None:
+    """Validate the no-job feature configuration used by the remote preflight."""
+
+    payload = _base_upstream_config(config, input_files=[])
+    if config.feature_mode == "mmseqs2":
+        _validate_mmseqs2_af2_payload(payload, config)
+
+
+def _base_upstream_config(
+    config: RemoteConfig,
+    *,
+    input_files: list[Path],
+    use_precomputed_features: bool = False,
+) -> dict[str, object]:
     data_pipeline = "alphafold2" if config.feature_mode == "mmseqs2" else "alphafold3"
     fold_backend = "alphafold2" if config.feature_mode == "mmseqs2" else "alphafold3"
     prediction_container = (
@@ -607,7 +710,7 @@ def _base_upstream_config(config: RemoteConfig, *, input_files: list[Path]) -> d
         "output_directory": str(config.output_dir),
         "databases_directory": str(config.databases_dir or ""),
         "backend_weights_directory": str(config.backend_weights_dir or ""),
-        "feature_directory": [],
+        "feature_directory": [str(config.feature_dir)] if use_precomputed_features else [],
         "only_generate_features": False,
         "enable_structure_analysis": True,
         "generate_recursive_report": True,
@@ -632,7 +735,6 @@ def _base_upstream_config(config: RemoteConfig, *, input_files: list[Path]) -> d
         "feature_create_ram_scaling": 1.1,
         "structure_inference_ram_scaling": 1.1,
         "max_total_length_alphafold2": 5000,
-        "max_total_length_alphafold3": 7000,
         "max_protein_length": 0,
         "length_filter_fetch_uniprot": False,
         "alphafold_inference_threads": int(config.snakemake_cores),
@@ -649,10 +751,11 @@ def _base_upstream_config(config: RemoteConfig, *, input_files: list[Path]) -> d
     if config.feature_mode == "mmseqs2":
         feature_args = payload["create_feature_arguments"]
         require(isinstance(feature_args, dict), "Internal error: feature args must be a dict")
-        feature_args.pop("--data_pipeline", None)
-        feature_args["--compress_features"] = (
-            "True --data_pipeline=alphafold2 --use_mmseqs2=True --skip_existing=True"
-        )
+        feature_args["--data_pipeline"] = "alphafold2"
+        feature_args["--use_mmseqs2"] = True
+        feature_args["--skip_existing"] = True
+    else:
+        payload["max_total_length_alphafold3"] = 7000
     for name in [
         "create_feature_arguments",
         "structure_inference_arguments",
@@ -661,6 +764,8 @@ def _base_upstream_config(config: RemoteConfig, *, input_files: list[Path]) -> d
         arguments = payload[name]
         require(isinstance(arguments, dict), f"Internal error: {name} must be a dict")
         _validate_cli_argument_map(name, arguments)
+    if config.feature_mode == "mmseqs2":
+        _validate_mmseqs2_af2_payload(payload, config)
     return payload
 
 
@@ -679,7 +784,9 @@ def write_resolved_prediction_config(
 ) -> tuple[Path, list[Path]]:
     run_dir = config.provenance_dir / run_id
     input_files = write_prediction_input_files(config, screen=screen, output_dir=run_dir)
-    payload = _base_upstream_config(config, input_files=input_files)
+    payload = _base_upstream_config(
+        config, input_files=input_files, use_precomputed_features=True
+    )
     payload["only_generate_features"] = False
     path = run_dir / f"prediction.{screen}.config.yaml"
     _write_yaml(path, payload)

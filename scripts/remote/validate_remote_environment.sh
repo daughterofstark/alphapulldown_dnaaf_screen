@@ -125,6 +125,13 @@ if [[ "${FEATURE_MODE:-localdb}" == "localdb" ]]; then
   else fail "Databases directory" "missing or not a directory: ${DATABASES_DIR:-unset}"; fi
 fi
 
+if ! remote_python -m alphapulldown_dnaaf_screen.remote_cli \
+  --config "${REMOTE_ENV_FILE}" validate-feature-model; then
+  fail "Feature execution model" "resolved feature configuration is incompatible"
+else
+  ok "Feature execution model" "resolved configuration is internally consistent"
+fi
+
 for path_var in REMOTE_PROJECT_ROOT FASTA_DIR ALPHAPULLDOWN_INPUT_DIR FEATURE_DIR OUTPUT_DIR LOG_DIR TMP_DIR PROVENANCE_DIR; do
   value="${!path_var:-}"
   if [[ -z "${value}" ]]; then

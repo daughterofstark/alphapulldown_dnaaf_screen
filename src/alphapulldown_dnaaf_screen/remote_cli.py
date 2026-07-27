@@ -18,6 +18,7 @@ from .remote import (
     stable_run_id,
     validate_accession_files,
     validate_configured_sif,
+    validate_feature_execution_model,
     write_resolved_feature_config,
     write_resolved_prediction_config,
 )
@@ -31,6 +32,8 @@ def build_parser() -> argparse.ArgumentParser:
 
     feature = subparsers.add_parser("feature-command")
     feature.add_argument("--dry-run", action="store_true")
+
+    subparsers.add_parser("validate-feature-model")
 
     prediction = subparsers.add_parser("prediction-command")
     prediction.add_argument(
@@ -51,6 +54,7 @@ def feature_command(args: argparse.Namespace) -> int:
     config = load_remote_config(args.config)
     validate_accession_files(config)
     validate_configured_sif(config)
+    validate_feature_execution_model(config)
     run_id = stable_run_id("feature")
     resolved_config, feature_inputs = write_resolved_feature_config(config, run_id=run_id)
     config = replace(config, feature_config=resolved_config)
@@ -65,6 +69,16 @@ def feature_command(args: argparse.Namespace) -> int:
         input_paths=provenance_inputs,
     )
     print(shell_join(command))
+    return 0
+
+
+def validate_feature_model(args: argparse.Namespace) -> int:
+    config = load_remote_config(args.config)
+    validate_feature_execution_model(config)
+    print(
+        "Feature execution model valid: "
+        f"mode={config.feature_mode}, pattern={config.feature_pattern}"
+    )
     return 0
 
 
@@ -122,6 +136,7 @@ def check_feature_coverage(args: argparse.Namespace) -> int:
 
 COMMANDS = {
     "feature-command": feature_command,
+    "validate-feature-model": validate_feature_model,
     "prediction-command": prediction_command_action,
     "check-feature-coverage": check_feature_coverage,
 }
