@@ -19,6 +19,8 @@ from alphapulldown_dnaaf_screen.remote import (
     prediction_command,
     require_linux,
     stable_run_id,
+    snakemake_base_command,
+    upstream_cli_parameters,
     validate_configured_sif,
     write_resolved_feature_config,
     write_resolved_prediction_config,
@@ -414,6 +416,50 @@ class RemoteHandoffTests(unittest.TestCase):
             command = feature_generation_command(config, dry_run=True)
             self.assertIn("--cores", command)
             self.assertNotIn("--profile", command)
+
+    def test_empty_profile_values_are_omitted_from_snakemake_command(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            config = load_remote_config(write_fixture(Path(tmp)))
+            command = snakemake_base_command(
+                config,
+                configfile=config.feature_config,
+                dry_run=True,
+                profile=Path(""),
+            )
+            self.assertIn("--cores", command)
+            self.assertNotIn("--profile", command)
+
+    def test_mmseqs2_feature_arguments_render_as_one_shell_parameter_line(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            env = write_fixture(Path(tmp))
+            text = env.read_text()
+            text = text.replace("FEATURE_MODE=localdb", "FEATURE_MODE=mmseqs2")
+            text = text.replace("FEATURE_FILE_PATTERN={record_id}_af3_input.json\n", "")
+            env.write_text(text)
+            config = load_remote_config(env)
+            path, _ = write_resolved_feature_config(config, run_id="feature-mmseqs2-line")
+            resolved = path.read_text()
+            self.assertIn("  --use_mmseqs2: true", resolved)
+            self.assertIn("  --skip_existing: true", resolved)
+            self.assertNotIn("\n--use_mmseqs2", resolved)
+            self.assertNotIn("\n--skip_existing", resolved)
+            args = {
+                "--save_msa_files": False,
+                "--use_precomputed_msas": True,
+                "--max_template_date": "2050-01-01",
+                "--compress_features": True,
+                "--data_pipeline": "alphafold2",
+                "--use_mmseqs2": True,
+                "--skip_existing": True,
+            }
+            rendered = upstream_cli_parameters(args)
+            self.assertNotIn("\n", rendered)
+            self.assertIn("--data_pipeline=alphafold2 --use_mmseqs2=True", rendered)
+            self.assertTrue(rendered.endswith("--skip_existing=True"))
+
+    def test_feature_argument_newlines_are_rejected_before_snakemake(self) -> None:
+        with self.assertRaises(ValidationError):
+            upstream_cli_parameters({"--data_pipeline": "alphafold2\n--use_mmseqs2=True"})
 
     def test_runpod_rebuild_detects_corruption_by_execution(self) -> None:
         text = Path("scripts/remote/rebuild_runpod_runtime.sh").read_text(encoding="utf-8")

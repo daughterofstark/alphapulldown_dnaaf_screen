@@ -142,8 +142,8 @@ class RemoteConfig:
         backend_weights = (
             Path(values["BACKEND_WEIGHTS_DIR"]) if values.get("BACKEND_WEIGHTS_DIR") else None
         )
-        profile = Path(values["SNAKEMAKE_PROFILE"]) if values.get("SNAKEMAKE_PROFILE") else None
-        slurm = Path(values["SLURM_PROFILE"]) if values.get("SLURM_PROFILE") else None
+        profile = _optional_path(values.get("SNAKEMAKE_PROFILE"))
+        slurm = _optional_path(values.get("SLURM_PROFILE"))
         apptainer_prediction_sif = (
             Path(values["APPTAINER_PREDICTION_SIF"])
             if values.get("APPTAINER_PREDICTION_SIF")
@@ -194,6 +194,15 @@ class RemoteConfig:
             snakemake_cores=values.get("SNAKEMAKE_CORES", "8"),
             snakemake_jobs=values.get("SNAKEMAKE_JOBS", "50"),
         )
+
+
+def _optional_path(value: str | None) -> Path | None:
+    if value is None:
+        return None
+    text = str(value).strip().strip("'").strip('"').strip()
+    if not text or text == ".":
+        return None
+    return Path(text)
 
 
 def load_remote_config(path: Path) -> RemoteConfig:
@@ -542,6 +551,27 @@ def _yaml_scalar_empty(value: object) -> str:
     return _yaml_scalar(value)
 
 
+def _validate_cli_argument_map(name: str, arguments: dict[str, object]) -> None:
+    for key, value in arguments.items():
+        key_text = str(key)
+        value_text = str(value)
+        require(key_text.startswith("--"), f"{name} key must be a CLI flag: {key_text}")
+        require(
+            "\n" not in key_text and "\r" not in key_text,
+            f"{name} key contains an embedded newline: {key_text!r}",
+        )
+        require(
+            "\n" not in value_text and "\r" not in value_text,
+            f"{name} value for {key_text} contains an embedded newline",
+        )
+
+
+def upstream_cli_parameters(arguments: dict[str, object]) -> str:
+    """Mirror AlphaPulldownSnakemake 2.5.0's CLI argument rendering."""
+    _validate_cli_argument_map("upstream CLI arguments", arguments)
+    return " ".join([f"{key}={value}" for key, value in arguments.items()])
+
+
 def _base_upstream_config(config: RemoteConfig, *, input_files: list[Path]) -> dict[str, object]:
     data_pipeline = "alphafold2" if config.feature_mode == "mmseqs2" else "alphafold3"
     fold_backend = "alphafold2" if config.feature_mode == "mmseqs2" else "alphafold3"
@@ -603,6 +633,14 @@ def _base_upstream_config(config: RemoteConfig, *, input_files: list[Path]) -> d
         require(isinstance(feature_args, dict), "Internal error: feature args must be a dict")
         feature_args["--use_mmseqs2"] = True
         feature_args["--skip_existing"] = True
+    for name in [
+        "create_feature_arguments",
+        "structure_inference_arguments",
+        "analyze_structure_arguments",
+    ]:
+        arguments = payload[name]
+        require(isinstance(arguments, dict), f"Internal error: {name} must be a dict")
+        _validate_cli_argument_map(name, arguments)
     return payload
 
 
@@ -643,8 +681,9 @@ def snakemake_base_command(
     if config.apptainer_prefix is not None:
         command.extend(["--apptainer-prefix", str(config.apptainer_prefix)])
     selected_profile = profile if profile is not None else config.snakemake_profile
-    if selected_profile:
-        command.extend(["--profile", str(selected_profile)])
+    selected_profile_text = "" if selected_profile is None else str(selected_profile).strip()
+    if selected_profile_text and selected_profile_text != ".":
+        command.extend(["--profile", selected_profile_text])
     else:
         command.extend(["--cores", config.snakemake_cores])
     if dry_run:
