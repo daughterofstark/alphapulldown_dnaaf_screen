@@ -70,6 +70,11 @@ if ! command -v apptainer >/dev/null 2>&1; then
   exit 2
 fi
 
+if [[ -n "${APPTAINER_PREDICTION_SIF:-}" ]]; then
+  require_executable_apptainer_sif "${APPTAINER_PREDICTION_SIF}"
+  echo "Configured prediction SIF is executable on this host."
+fi
+
 if command -v mamba >/dev/null 2>&1; then
   ENV_MANAGER="mamba"
 elif command -v conda >/dev/null 2>&1; then

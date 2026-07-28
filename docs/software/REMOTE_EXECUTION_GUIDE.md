@@ -55,6 +55,15 @@ Validate:
 bash scripts/remote/validate_remote_environment.sh
 ```
 
+The validator checks both SIF integrity and execution capability. A successful
+`apptainer inspect` does not prove that the host can execute containers; the
+validator also runs `apptainer exec <SIF> true` before Snakemake can start. If
+that fails because unprivileged user namespaces are disabled, stop and ask the
+platform administrator for a supported Apptainer runtime (for example, the
+official SUID helper package or a pod configuration that permits Apptainer
+execution). Do not change host sysctl settings from inside a pod. The relevant
+host requirements are documented by [Apptainer](https://apptainer.org/docs/admin/latest/installation.html).
+
 ## Feature Generation
 
 ```bash

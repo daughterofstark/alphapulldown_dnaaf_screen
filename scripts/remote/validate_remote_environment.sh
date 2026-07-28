@@ -87,10 +87,15 @@ if [[ -n "${APPTAINER_PREDICTION_SIF:-}" ]]; then
     fail "Prediction SIF" "empty: ${APPTAINER_PREDICTION_SIF}"
   elif apptainer inspect "${APPTAINER_PREDICTION_SIF}" >/tmp/ap_sif_inspect.$$ 2>/tmp/ap_sif_inspect_err.$$; then
     ok "Prediction SIF" "${APPTAINER_PREDICTION_SIF}"
+    if apptainer exec "${APPTAINER_PREDICTION_SIF}" true >/tmp/ap_sif_exec.$$ 2>/tmp/ap_sif_exec_err.$$; then
+      ok "Prediction SIF execution" "apptainer exec <SIF> true"
+    else
+      fail "Prediction SIF execution" "container cannot execute. Ask the platform administrator for the official Apptainer SUID helper package or a pod configuration that permits Apptainer execution; do not change host sysctl settings inside the pod. $(cat /tmp/ap_sif_exec_err.$$ 2>/dev/null || true)"
+    fi
   else
     fail "Prediction SIF" "$(cat /tmp/ap_sif_inspect_err.$$ 2>/dev/null || echo inspect failed)"
   fi
-  rm -f /tmp/ap_sif_inspect.$$ /tmp/ap_sif_inspect_err.$$
+  rm -f /tmp/ap_sif_inspect.$$ /tmp/ap_sif_inspect_err.$$ /tmp/ap_sif_exec.$$ /tmp/ap_sif_exec_err.$$
 else
   report "Prediction SIF" "not configured; Snakemake may pull/convert container images"
 fi

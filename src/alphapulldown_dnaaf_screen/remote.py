@@ -21,12 +21,6 @@ SUPPORTED_SCREENS = {"controls", "transport", "full", "milestone2"}
 SUPPORTED_FEATURE_MODES = {"localdb", "mmseqs2"}
 DEFAULT_FEATURE_PATTERN = "{record_id}_af3_input.json"
 MMS2_AF2_FEATURE_PATTERN = "{record_id}.pkl.xz"
-UPSTREAM_CLI_ARGUMENT_KEYS = {
-    "create_feature_arguments",
-    "structure_inference_arguments",
-    "analyze_structure_arguments",
-    "recursive_report_arguments",
-}
 UPSTREAM_CONFIG_KEYS = {
     "input_files",
     "protein_delimiter",
@@ -417,8 +411,9 @@ def validate_configured_sif(
     config: RemoteConfig,
     *,
     inspect_runner: InspectRunner | None = None,
+    execution_runner: InspectRunner | None = None,
 ) -> None:
-    """Validate a configured production SIF before Snakemake can start."""
+    """Validate a configured production SIF and its host execution capability."""
     if config.apptainer_prediction_sif is None:
         return
     sif = config.apptainer_prediction_sif
@@ -432,9 +427,24 @@ def validate_configured_sif(
         "Configured APPTAINER_PREDICTION_SIF failed `apptainer inspect`: "
         f"{sif}\n{result.stderr.strip()}",
     )
+    runner = execution_runner or _run_apptainer_exec_true
+    result = runner(["apptainer", "exec", str(sif), "true"])
+    require(
+        result.returncode == 0,
+        "Configured APPTAINER_PREDICTION_SIF passed inspection but cannot execute on this "
+        "host. AlphaPulldownSnakemake requires executable Apptainer containers. Ask the "
+        "platform administrator for a supported Apptainer configuration (for example, the "
+        "official Apptainer SUID helper package or a pod configuration that permits "
+        "Apptainer execution). Do not change host sysctl settings from inside the pod.\n"
+        f"{result.stderr.strip()}",
+    )
 
 
 def _run_apptainer_inspect(command: list[str]) -> subprocess.CompletedProcess[str]:
+    return subprocess.run(command, check=False, text=True, capture_output=True)
+
+
+def _run_apptainer_exec_true(command: list[str]) -> subprocess.CompletedProcess[str]:
     return subprocess.run(command, check=False, text=True, capture_output=True)
 
 
@@ -501,73 +511,11 @@ def write_prediction_input_files(
     return output_paths
 
 
-def _yaml_scalar(value: object) -> str:
-    if isinstance(value, bool):
-        return "true" if value else "false"
-    if value is None:
-        return "null"
-    if isinstance(value, (int, float)):
-        return str(value)
-    text = str(value).replace("\\", "\\\\").replace('"', '\\"')
-    return f'"{text}"'
-
-
-def _write_yaml(path: Path, payload: dict[str, object]) -> None:
-    def emit(value: object, indent: int = 0) -> list[str]:
-        prefix = " " * indent
-        lines: list[str] = []
-        if isinstance(value, dict):
-            if not value:
-                lines.append(f"{prefix}{{}}")
-                return lines
-            for key, item in value.items():
-                if key in UPSTREAM_CLI_ARGUMENT_KEYS and isinstance(item, dict):
-                    lines.append(f"{prefix}{key}: {_yaml_inline_dict(item)}")
-                    continue
-                if isinstance(item, (dict, list)):
-                    if not item:
-                        lines.append(f"{prefix}{key}: {_yaml_scalar_empty(item)}")
-                    else:
-                        lines.append(f"{prefix}{key}:")
-                        lines.extend(emit(item, indent + 2))
-                else:
-                    lines.append(f"{prefix}{key}: {_yaml_scalar(item)}")
-        elif isinstance(value, list):
-            if not value:
-                lines.append(f"{prefix}[]")
-                return lines
-            for item in value:
-                if isinstance(item, (dict, list)):
-                    if not item:
-                        lines.append(f"{prefix}- {_yaml_scalar_empty(item)}")
-                    else:
-                        lines.append(f"{prefix}-")
-                        lines.extend(emit(item, indent + 2))
-                else:
-                    lines.append(f"{prefix}- {_yaml_scalar(item)}")
-        else:
-            lines.append(f"{prefix}{_yaml_scalar(value)}")
-        return lines
+def _write_json_config(path: Path, payload: dict[str, object]) -> None:
+    """Write a resolved Snakemake configuration without YAML formatting ambiguity."""
 
     path.parent.mkdir(parents=True, exist_ok=True)
-    path.write_text("\n".join(emit(payload)) + "\n", encoding="utf-8")
-
-
-def _yaml_inline_dict(value: dict[object, object]) -> str:
-    if not value:
-        return "{}"
-    parts = []
-    for key, item in value.items():
-        parts.append(f"{_yaml_scalar(key)}: {_yaml_scalar(item)}")
-    return "{" + ", ".join(parts) + "}"
-
-
-def _yaml_scalar_empty(value: object) -> str:
-    if isinstance(value, list):
-        return "[]"
-    if isinstance(value, dict):
-        return "{}"
-    return _yaml_scalar(value)
+    path.write_text(json.dumps(payload, indent=2) + "\n", encoding="utf-8")
 
 
 def _validate_cli_argument_map(name: str, arguments: dict[str, object]) -> None:
@@ -635,6 +583,25 @@ def pinned_workflow_feature_plan(
         is_af3=is_af3,
         feature_output_pattern=feature_output_pattern,
         cli_parameters=upstream_cli_parameters(create_feature_arguments),
+    )
+
+
+def render_pinned_create_features_command(
+    *,
+    fasta_path: str,
+    data_directory: str,
+    output_directory: str,
+    create_feature_arguments: dict[str, object],
+) -> str:
+    """Render the pinned 2.5.0 ``create_features`` shell payload for preflight tests."""
+
+    cli_parameters = upstream_cli_parameters(create_feature_arguments)
+    return (
+        "create_individual_features.py \\\n"
+        f"  --fasta_paths={fasta_path} \\\n"
+        f"  --data_dir={data_directory} \\\n"
+        f"  --output_dir={output_directory} \\\n"
+        f"  {cli_parameters}"
     )
 
 
@@ -774,8 +741,8 @@ def write_resolved_feature_config(config: RemoteConfig, *, run_id: str) -> tuple
     feature_inputs = write_feature_input_file(config, run_dir)
     payload = _base_upstream_config(config, input_files=[feature_inputs])
     payload["only_generate_features"] = True
-    path = run_dir / "feature_generation.config.yaml"
-    _write_yaml(path, payload)
+    path = run_dir / "feature_generation.config.json"
+    _write_json_config(path, payload)
     return path, feature_inputs
 
 
@@ -788,8 +755,8 @@ def write_resolved_prediction_config(
         config, input_files=input_files, use_precomputed_features=True
     )
     payload["only_generate_features"] = False
-    path = run_dir / f"prediction.{screen}.config.yaml"
-    _write_yaml(path, payload)
+    path = run_dir / f"prediction.{screen}.config.json"
+    _write_json_config(path, payload)
     return path, input_files
 
 

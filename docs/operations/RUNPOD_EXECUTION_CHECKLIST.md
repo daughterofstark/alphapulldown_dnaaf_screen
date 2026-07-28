@@ -28,6 +28,11 @@ Confirm:
 
 Do not start an A40 pod until Phase A has produced a valid SIF.
 
+A valid SIF is not sufficient: the target host must also be able to execute it.
+The RunPod CPU host observed on 2026-07-28 could inspect the SIF but could not
+create an unprivileged user namespace, so it could not run Apptainer at all.
+This is host policy, not a repository or image defect.
+
 ## Phase A - CPU Container Preparation
 
 Use a cheap x86_64 Linux CPU machine with:
@@ -122,7 +127,17 @@ Verify:
 ```bash
 apptainer inspect "${APPTAINER_PREDICTION_SIF}"
 sha256sum -c "${APPTAINER_PREDICTION_SIF}.sha256"
+apptainer exec "${APPTAINER_PREDICTION_SIF}" true
 ```
+
+The final command must succeed before moving to Phase B. If it reports that a
+user namespace cannot be created, stop before Snakemake. Do not modify
+`/proc/sys/kernel/unprivileged_userns_clone` from inside a pod. Ask the platform
+administrator for a supported runtime: Apptainer documents unprivileged user
+namespaces as necessary for non-SUID operation, and documents the official
+`apptainer-suid` package as the supported alternative where appropriate.
+See the [Apptainer installation guide](https://apptainer.org/docs/admin/latest/installation.html)
+and [user namespace requirements](https://apptainer.org/docs/admin/main/user_namespace.html).
 
 ## Phase B - CPU Feature Generation
 
@@ -153,6 +168,11 @@ bash scripts/remote/bootstrap_remote_environment.sh --dry-run
 bash scripts/remote/validate_remote_environment.sh
 bash scripts/remote/run_feature_generation.sh --dry-run
 ```
+
+`validate_remote_environment.sh` now distinguishes an installed Apptainer
+binary from an executable configured SIF. It runs the harmless preflight
+`apptainer exec "${APPTAINER_PREDICTION_SIF}" true`; failure is blocking and
+must be resolved by the platform administrator before any feature job starts.
 
 For the completed RunPod CPU Phase A, `config/remote/paths.env` should include:
 
@@ -218,7 +238,7 @@ PYTHONPATH=src python -m alphapulldown_dnaaf_screen.remote_cli \
 Required Phase B artifacts:
 
 - `${FEATURE_DIR}/*.pkl.xz`
-- resolved feature config under `${PROVENANCE_DIR}/feature-*/feature_generation.config.yaml`
+- resolved feature config under `${PROVENANCE_DIR}/feature-*/feature_generation.config.json`
 - feature input file under `${PROVENANCE_DIR}/feature-*/feature_inputs.txt`
 - feature-generation logs under `${LOG_DIR}`
 - provenance under `${PROVENANCE_DIR}`
@@ -293,6 +313,7 @@ cd /workspace/alphapulldown
 
 sha256sum -c "${APPTAINER_PREDICTION_SIF}.sha256"
 apptainer inspect "${APPTAINER_PREDICTION_SIF}"
+apptainer exec "${APPTAINER_PREDICTION_SIF}" true
 bash scripts/remote/bootstrap_remote_environment.sh --dry-run
 bash scripts/remote/validate_remote_environment.sh
 bash scripts/remote/run_prediction.sh --screen milestone2 --dry-run

@@ -220,10 +220,7 @@ class Milestone2BenchmarkTests(unittest.TestCase):
             config = benchmark_remote_config(Path(tmp))
             path, _ = write_resolved_feature_config(config, run_id="feature-m2-af2")
             resolved = path.read_text(encoding="utf-8")
-            create_line = next(
-                line for line in resolved.splitlines() if line.startswith("create_feature_arguments:")
-            )
-            arguments = parse_inline_argument_map(create_line)
+            arguments = json.loads(resolved)["create_feature_arguments"]
             plan = pinned_workflow_feature_plan(arguments)
 
             self.assertEqual(plan.data_pipeline, "alphafold2")
@@ -249,11 +246,11 @@ class Milestone2BenchmarkTests(unittest.TestCase):
             self.assertEqual(len(lines), 8)
             self.assertIn("HUMAN_DNAAF18.fasta+/", lines[0] + "/")
             self.assertNotIn("chlamy", inputs[0].read_text(encoding="utf-8").lower())
-            self.assertIn("prediction.milestone2.config.yaml", str(path))
-            resolved = path.read_text(encoding="utf-8")
-            self.assertIn(f'- "{config.feature_dir}"', resolved)
-            self.assertNotIn("alphafold3", resolved.lower())
-            self.assertNotIn("_af3_input.json", resolved)
+            self.assertIn("prediction.milestone2.config.json", str(path))
+            resolved = json.loads(path.read_text(encoding="utf-8"))
+            self.assertEqual(resolved["feature_directory"], [str(config.feature_dir)])
+            self.assertNotIn("alphafold3", json.dumps(resolved).lower())
+            self.assertNotIn("_af3_input.json", json.dumps(resolved))
 
     def test_milestone2_prediction_command_is_selectable_and_full_remains_blocked(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
@@ -298,38 +295,6 @@ def read_tsv(path: Path) -> list[dict[str, str]]:
 
     with path.open(encoding="utf-8", newline="") as handle:
         return list(csv.DictReader(handle, delimiter="\t"))
-
-
-def parse_inline_argument_map(line: str) -> dict[str, object]:
-    """Read the wrapper's one-line YAML map without adding a YAML dependency."""
-    body = line.split(":", 1)[1].strip()
-    assert body.startswith("{") and body.endswith("}")
-    fields: list[str] = []
-    current: list[str] = []
-    in_quote = False
-    for index, char in enumerate(body[1:-1]):
-        previous = body[index] if index else ""
-        if char == '"' and previous != "\\":
-            in_quote = not in_quote
-        if char == "," and not in_quote:
-            fields.append("".join(current).strip())
-            current = []
-        else:
-            current.append(char)
-    if current:
-        fields.append("".join(current).strip())
-
-    parsed: dict[str, object] = {}
-    for field in fields:
-        key, value = field.split(": ", 1)
-        value = value.strip()
-        if value == "true":
-            parsed[key.strip('"')] = True
-        elif value == "false":
-            parsed[key.strip('"')] = False
-        else:
-            parsed[key.strip('"')] = value.strip('"')
-    return parsed
 
 
 def benchmark_remote_config(tmp_path: Path):

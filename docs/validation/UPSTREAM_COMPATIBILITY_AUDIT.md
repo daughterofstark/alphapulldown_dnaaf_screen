@@ -76,7 +76,7 @@ This repository's wrappers now materialize resolved config files and invoke the 
 snakemake \
   --snakefile <AP_WORKFLOW_DIR>/workflow/Snakefile \
   --directory <AP_WORKFLOW_DIR> \
-  --configfile <results/provenance/run_id/*.config.yaml> \
+  --configfile <results/provenance/run_id/*.config.json> \
   --profile <AP_WORKFLOW_DIR>/config/profiles/desktop \
   --cores 8
 ```

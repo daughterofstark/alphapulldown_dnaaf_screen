@@ -18,6 +18,7 @@ from alphapulldown_dnaaf_screen.remote import (
     parse_env_file,
     prediction_command,
     pinned_workflow_feature_plan,
+    render_pinned_create_features_command,
     require_linux,
     stable_run_id,
     snakemake_base_command,
@@ -177,21 +178,19 @@ class RemoteHandoffTests(unittest.TestCase):
             path, inputs = write_resolved_feature_config(config, run_id="feature-test")
             self.assertTrue(inputs.exists())
             self.assertIn(f"{tmp}/data/processed/fasta/HUMAN_DNAAF9.fasta", inputs.read_text())
-            keys = top_level_keys(path)
+            keys = set(json.loads(path.read_text(encoding="utf-8")))
             self.assertLessEqual(keys, UPSTREAM_CONFIG_KEYS)
-            text = path.read_text()
-            self.assertIn("only_generate_features: true", text)
-            self.assertIn('"--data_pipeline": "alphafold3"', text)
+            payload = json.loads(path.read_text(encoding="utf-8"))
+            self.assertTrue(payload["only_generate_features"])
+            self.assertEqual(payload["create_feature_arguments"]["--data_pipeline"], "alphafold3")
 
-    def test_yaml_serializes_empty_collections_inline(self) -> None:
+    def test_json_preserves_empty_collections(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
             config = load_remote_config(write_fixture(Path(tmp)))
             path, _ = write_resolved_feature_config(config, run_id="empty-yaml-test")
-            text = path.read_text()
-            self.assertIn("feature_directory: []", text)
-            self.assertIn("recursive_report_arguments: {}", text)
-            self.assertNotIn("feature_directory:\nonly_generate_features", text)
-            self.assertNotIn("recursive_report_arguments:\ncreate_feature_arguments", text)
+            payload = json.loads(path.read_text(encoding="utf-8"))
+            self.assertEqual(payload["feature_directory"], [])
+            self.assertEqual(payload["recursive_report_arguments"], {})
 
     def test_mmseqs2_mode_uses_alphafold2_pipeline(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
@@ -203,13 +202,13 @@ class RemoteHandoffTests(unittest.TestCase):
             config = load_remote_config(env)
             self.assertEqual(config.feature_pattern, "{record_id}.pkl.xz")
             path, _ = write_resolved_feature_config(config, run_id="feature-mmseqs2")
-            resolved = path.read_text()
-            self.assertIn('"--data_pipeline": "alphafold2"', resolved)
-            self.assertIn('"--use_mmseqs2": true', resolved)
-            self.assertIn('"--skip_existing": true', resolved)
-            self.assertNotIn("alphafold3", resolved.lower())
-            self.assertNotIn("_af3_input.json", resolved)
-            self.assertIn("docker://kosinskilab/alphafold2:2.5.0", resolved)
+            payload = json.loads(path.read_text(encoding="utf-8"))
+            self.assertEqual(payload["create_feature_arguments"]["--data_pipeline"], "alphafold2")
+            self.assertIs(payload["create_feature_arguments"]["--use_mmseqs2"], True)
+            self.assertIs(payload["create_feature_arguments"]["--skip_existing"], True)
+            self.assertNotIn("alphafold3", json.dumps(payload).lower())
+            self.assertNotIn("_af3_input.json", json.dumps(payload))
+            self.assertEqual(payload["prediction_container"], "docker://kosinskilab/alphafold2:2.5.0")
 
     def test_configured_sif_path_is_emitted_into_feature_config(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
@@ -224,9 +223,8 @@ class RemoteHandoffTests(unittest.TestCase):
             )
             config = load_remote_config(env)
             path, _ = write_resolved_feature_config(config, run_id="feature-sif")
-            text = path.read_text()
-            self.assertIn(f'prediction_container: "{sif}"', text)
-            self.assertNotIn("docker://kosinskilab/alphafold2:2.5.0", text)
+            payload = json.loads(path.read_text(encoding="utf-8"))
+            self.assertEqual(payload["prediction_container"], str(sif))
 
     def test_configured_sif_path_is_emitted_into_prediction_config(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
@@ -243,9 +241,8 @@ class RemoteHandoffTests(unittest.TestCase):
             path, _ = write_resolved_prediction_config(
                 config, screen="controls", run_id="prediction-sif"
             )
-            text = path.read_text()
-            self.assertIn(f'prediction_container: "{sif}"', text)
-            self.assertNotIn("docker://kosinskilab/alphafold2:2.5.0", text)
+            payload = json.loads(path.read_text(encoding="utf-8"))
+            self.assertEqual(payload["prediction_container"], str(sif))
 
     def test_configured_sif_must_be_absolute(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
@@ -261,7 +258,11 @@ class RemoteHandoffTests(unittest.TestCase):
             env.write_text(env.read_text() + f"APPTAINER_PREDICTION_SIF={root / 'missing.sif'}\n")
             config = load_remote_config(env)
             with self.assertRaises(ValidationError):
-                validate_configured_sif(config, inspect_runner=successful_inspect)
+                validate_configured_sif(
+                    config,
+                    inspect_runner=successful_inspect,
+                    execution_runner=successful_inspect,
+                )
 
     def test_zero_byte_sif_fails_validation(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
@@ -283,7 +284,11 @@ class RemoteHandoffTests(unittest.TestCase):
             env.write_text(env.read_text() + f"APPTAINER_PREDICTION_SIF={sif}\n")
             config = load_remote_config(env)
             with self.assertRaises(ValidationError):
-                validate_configured_sif(config, inspect_runner=failing_inspect)
+                validate_configured_sif(
+                    config,
+                    inspect_runner=failing_inspect,
+                    execution_runner=successful_inspect,
+                )
 
     def test_valid_sif_passes_validation(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
@@ -293,7 +298,28 @@ class RemoteHandoffTests(unittest.TestCase):
             env = write_fixture(root)
             env.write_text(env.read_text() + f"APPTAINER_PREDICTION_SIF={sif}\n")
             config = load_remote_config(env)
-            validate_configured_sif(config, inspect_runner=successful_inspect)
+            validate_configured_sif(
+                config,
+                inspect_runner=successful_inspect,
+                execution_runner=successful_inspect,
+            )
+
+    def test_sif_execution_failure_is_blocking_and_does_not_suggest_sysctl_changes(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            sif = root / "valid.sif"
+            sif.write_bytes(b"sif")
+            env = write_fixture(root)
+            env.write_text(env.read_text() + f"APPTAINER_PREDICTION_SIF={sif}\n")
+            config = load_remote_config(env)
+            with self.assertRaisesRegex(ValidationError, "cannot execute") as context:
+                validate_configured_sif(
+                    config,
+                    inspect_runner=successful_inspect,
+                    execution_runner=failing_user_namespace_exec,
+                )
+            self.assertIn("SUID helper package", str(context.exception))
+            self.assertIn("Do not change host sysctl settings", str(context.exception))
 
     def test_feature_mode_values_are_explicit(self) -> None:
         self.assertEqual(SUPPORTED_FEATURE_MODES, {"localdb", "mmseqs2"})
@@ -445,34 +471,30 @@ class RemoteHandoffTests(unittest.TestCase):
             env.write_text(text)
             config = load_remote_config(env)
             path, _ = write_resolved_feature_config(config, run_id="feature-mmseqs2-line")
-            resolved = path.read_text()
-            create_line = next(
-                line for line in resolved.splitlines() if line.startswith("create_feature_arguments:")
-            )
-            self.assertIn('"--data_pipeline": "alphafold2"', create_line)
-            self.assertIn('"--use_mmseqs2": true', create_line)
-            self.assertIn('"--skip_existing": true', create_line)
-            self.assertNotIn("\n", create_line)
-            args = parse_inline_argument_map(create_line)
+            payload = json.loads(path.read_text(encoding="utf-8"))
+            args = payload["create_feature_arguments"]
+            self.assertIsInstance(args, dict)
             plan = pinned_workflow_feature_plan(args)
             rendered = plan.cli_parameters
-            self.assertNotIn("\n", rendered)
-            self.assertIn("--data_pipeline=alphafold2", rendered)
-            self.assertIn("--use_mmseqs2=True", rendered)
-            self.assertTrue(rendered.endswith("--skip_existing=True"))
+            self.assertEqual(
+                rendered,
+                "--save_msa_files=False --use_precomputed_msas=True "
+                "--max_template_date=2050-01-01 --compress_features=True "
+                "--data_pipeline=alphafold2 --use_mmseqs2=True --skip_existing=True",
+            )
             self.assertEqual(plan.data_pipeline, "alphafold2")
             self.assertFalse(plan.is_af3)
             self.assertEqual(plan.feature_name("HUMAN_IFT80"), "HUMAN_IFT80.pkl.xz")
-            shell_command = (
-                "create_individual_features.py \\\n"
-                "  --fasta_paths=input.fasta \\\n"
-                "  --data_dir= \\\n"
-                "  --output_dir=features \\\n"
-                f"  {rendered}"
+            shell_command = render_pinned_create_features_command(
+                fasta_path="input.fasta",
+                data_directory="",
+                output_directory="features",
+                create_feature_arguments=args,
             )
-            self.assertIn(
+            self.assertTrue(
+                shell_command.endswith(
                 "--data_pipeline=alphafold2 --use_mmseqs2=True --skip_existing=True",
-                shell_command,
+                )
             )
             self.assertNotIn("\n--use_mmseqs2=True", shell_command)
             self.assertNotIn("\n--skip_existing=True", shell_command)
@@ -555,8 +577,22 @@ class RemoteHandoffTests(unittest.TestCase):
         )
         self.assertIn("command -v apptainer", bootstrap)
         self.assertIn("Apptainer is required", bootstrap)
+        self.assertIn("require_executable_apptainer_sif", bootstrap)
         self.assertIn("command -v apptainer", validator)
         self.assertIn("fail \"Apptainer\"", validator)
+        self.assertIn('apptainer exec "${APPTAINER_PREDICTION_SIF}" true', validator)
+
+    def test_execution_preflight_has_safe_host_remediation(self) -> None:
+        common = Path("scripts/remote/common.sh").read_text(encoding="utf-8")
+        checklist = Path("docs/operations/RUNPOD_EXECUTION_CHECKLIST.md").read_text(
+            encoding="utf-8"
+        )
+        self.assertIn('apptainer exec "${sif_path}" true', common)
+        self.assertIn("Apptainer SUID helper package", common)
+        self.assertIn("Do not change host sysctl settings", common)
+        self.assertIn('apptainer exec "${APPTAINER_PREDICTION_SIF}" true', checklist)
+        self.assertIn("Do not modify", checklist)
+        self.assertNotIn("unprivileged_userns_clone=1", common)
 
     def test_apptainer_prep_detects_filesystem_types(self) -> None:
         text = Path("scripts/remote/prepare_apptainer_image.sh").read_text(encoding="utf-8")
@@ -636,6 +672,7 @@ class RemoteHandoffTests(unittest.TestCase):
         self.assertIn("/workspace/alphapulldown/results/containers/kosinskilab_alphafold2_2.5.0.sif", text)
         self.assertIn('REMOTE_EXECUTION_STAGE="gpu"', text)
 
+
 def top_level_keys(path: Path) -> set[str]:
     keys: set[str] = set()
     for raw_line in path.read_text(encoding="utf-8").splitlines():
@@ -645,48 +682,22 @@ def top_level_keys(path: Path) -> set[str]:
             keys.add(raw_line.split(":", 1)[0])
     return keys
 
-
-def parse_inline_argument_map(line: str) -> dict[str, object]:
-    body = line.split(":", 1)[1].strip()
-    assert body.startswith("{") and body.endswith("}")
-    inner = body[1:-1]
-    fields: list[str] = []
-    current = []
-    in_quote = False
-    index = 0
-    while index < len(inner):
-        char = inner[index]
-        if char == '"' and (index == 0 or inner[index - 1] != "\\"):
-            in_quote = not in_quote
-        if char == "," and not in_quote:
-            fields.append("".join(current).strip())
-            current = []
-        else:
-            current.append(char)
-        index += 1
-    if current:
-        fields.append("".join(current).strip())
-
-    parsed: dict[str, object] = {}
-    for field in fields:
-        key, value = field.split(": ", 1)
-        key = key.strip().strip('"')
-        value = value.strip()
-        if value == "true":
-            parsed[key] = True
-        elif value == "false":
-            parsed[key] = False
-        else:
-            parsed[key] = value.strip('"')
-    return parsed
-
-
 def successful_inspect(command: list[str]) -> subprocess.CompletedProcess[str]:
     return subprocess.CompletedProcess(command, 0, stdout="ok", stderr="")
 
 
 def failing_inspect(command: list[str]) -> subprocess.CompletedProcess[str]:
     return subprocess.CompletedProcess(command, 1, stdout="", stderr="bad sif")
+
+
+def failing_user_namespace_exec(command: list[str]) -> subprocess.CompletedProcess[str]:
+    return subprocess.CompletedProcess(
+        command,
+        1,
+        stdout="",
+        stderr="Failed to create user namespace: user namespace requires to set "
+        "/proc/sys/kernel/unprivileged_userns_clone to 1",
+    )
 
 
 if __name__ == "__main__":

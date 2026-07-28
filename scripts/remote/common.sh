@@ -45,6 +45,29 @@ ensure_dir() {
   fi
 }
 
+require_executable_apptainer_sif() {
+  local sif_path="$1"
+  require_command apptainer
+  if [[ ! -f "${sif_path}" || ! -s "${sif_path}" ]]; then
+    echo "Configured APPTAINER_PREDICTION_SIF is missing or empty: ${sif_path}" >&2
+    return 2
+  fi
+  if ! apptainer inspect "${sif_path}" >/dev/null 2>&1; then
+    echo "Configured APPTAINER_PREDICTION_SIF failed apptainer inspect: ${sif_path}" >&2
+    return 2
+  fi
+  if ! apptainer exec "${sif_path}" true; then
+    cat >&2 <<'MESSAGE'
+Configured SIF passed inspection but cannot execute on this host. This is a host
+container-runtime capability issue, not a SIF corruption issue. Ask the platform
+administrator for a supported Apptainer configuration, such as the official
+Apptainer SUID helper package or a pod configuration that permits Apptainer
+execution. Do not change host sysctl settings from inside a pod.
+MESSAGE
+    return 2
+  fi
+}
+
 remote_python() {
   if [[ -n "${PYTHON_BIN:-}" ]]; then
     PYTHONPATH="${REPO_ROOT}/src:${PYTHONPATH:-}" "${PYTHON_BIN}" "$@"
