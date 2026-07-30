@@ -6,6 +6,13 @@ AlphaPulldown separates per-protein feature generation from pairwise structure p
 
 Computing features once per protein prevents repeated MSA/template work when the same protein appears in many pairwise screens.
 
+> **RunPod Milestone 2:** use
+> `scripts/remote/run_native_stage.sh --stage features`. It directly invokes
+> `create_individual_features.py` inside the Pod image and is locked to the
+> independent benchmark manifest, AF2, MMseqs2, and compressed `*.pkl.xz`
+> outputs. The Snakemake material below applies only to compatible non-RunPod
+> environments.
+
 For `KosinskiLab/AlphaPulldownSnakemake` tag `2.5.0`, feature-only execution is exposed by the upstream config key:
 
 ```yaml

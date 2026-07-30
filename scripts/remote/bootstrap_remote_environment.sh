@@ -39,6 +39,13 @@ done
 
 load_remote_env "${REMOTE_ENV_FILE}"
 require_linux
+if [[ "${CONTAINER_RUNTIME:-apptainer}" == "docker-native" ]]; then
+  echo "Docker-native RunPod mode uses the Pod image as the complete runtime."
+  echo "No Conda, Snakemake, Apptainer, SIF, or nested container bootstrap is performed."
+  remote_python -m alphapulldown_dnaaf_screen.native_cli \
+    --config "${REMOTE_ENV_FILE}" validate
+  exit 0
+fi
 REMOTE_EXECUTION_STAGE="${REMOTE_EXECUTION_STAGE:-gpu}"
 case "${REMOTE_EXECUTION_STAGE}" in
   cpu|gpu) ;;

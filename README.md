@@ -46,16 +46,21 @@ PYTHONPATH=src python -m alphapulldown_dnaaf_screen.cli build-screens
 PYTHONPATH=src python -m alphapulldown_dnaaf_screen.cli prepare-alphapulldown
 ```
 
-Remote Linux handoff commands:
+RunPod Docker-native Milestone 2 handoff commands:
 
 ```bash
-cp config/remote/paths.example.env config/remote/paths.env
-bash scripts/remote/validate_remote_environment.sh
-bash scripts/remote/run_feature_generation.sh --dry-run
-bash scripts/remote/run_prediction.sh --screen controls --dry-run
+cp config/benchmarks/milestone2_remote.example.env config/remote/paths.env
+bash scripts/remote/validate_remote_environment.sh \
+  --env-file config/remote/paths.env
+bash scripts/remote/run_native_stage.sh \
+  --stage features \
+  --env-file config/remote/paths.env \
+  --dry-run
 ```
 
-See [docs/software/REMOTE_EXECUTION_GUIDE.md](docs/software/REMOTE_EXECUTION_GUIDE.md).
+The Docker image must be built, published, and pinned before non-dry-run work.
+See
+[docs/software/RUNPOD_DOCKER_NATIVE_GUIDE.md](docs/software/RUNPOD_DOCKER_NATIVE_GUIDE.md).
 
 ## Directory Structure
 

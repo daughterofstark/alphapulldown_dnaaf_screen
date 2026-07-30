@@ -1,5 +1,11 @@
 # RunPod Container Offload Audit
 
+> **Superseded for RunPod:** RunPod support confirmed that Pods cannot execute
+> Apptainer/Singularity SIFs. This document is retained as historical evidence.
+> Current RunPod execution uses the Docker-native design in
+> `RUNPOD_DOCKER_NATIVE_MIGRATION_AUDIT.md` and
+> `docs/operations/RUNPOD_EXECUTION_CHECKLIST.md`.
+
 Date: 2026-07-25
 
 Scope: determine whether AlphaPulldownSnakemake `2.5.0` container preparation can be moved off the A40 RunPod GPU pod before restarting paid GPU infrastructure.

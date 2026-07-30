@@ -6,6 +6,10 @@ Local macOS is used for preparation, validation, documentation, and later result
 
 Do not install AlphaPulldown locally on macOS for this project.
 
+> **RunPod:** the Snakemake/Apptainer procedure below is retained for compatible
+> non-RunPod Linux systems. RunPod Pods use the single-container native runtime
+> in `RUNPOD_DOCKER_NATIVE_GUIDE.md`; they must not use these SIF commands.
+
 ## End-to-End Workflow
 
 ```text

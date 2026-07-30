@@ -1,0 +1,13 @@
+{
+  "architecture": "linux/amd64",
+  "base_image": "kosinskilab/alphafold2:2.5.0",
+  "base_image_config_digest": "sha256:370458d88b165f036727061b4484495488a42ea1d9bd5c8e011c76b2724ab0c4",
+  "base_image_digest": "sha256:434704a18e24d59de7cbfd6f7cdc310d5dce03ded6cf91c4927b6e2c9e87110c",
+  "derived_image_digest": "UNBUILT",
+  "derived_image_reference": "REPLACE_WITH_REGISTRY/alphapulldown-runpod-af2:2.5.0-project",
+  "expected_alphapulldown_version": "2.5.0",
+  "expected_alphapulldown_revision": "TO_BE_CONFIRMED_BY_DIRECT_IMAGE_POC",
+  "input_parser_version": "0.5.1",
+  "upstream_snakemake_commit": "23cbba5f151f843d800b5cffaa7a3a3908c35d9e",
+  "upstream_snakemake_tag": "2.5.0"
+}

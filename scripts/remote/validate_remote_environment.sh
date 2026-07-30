@@ -51,6 +51,20 @@ ok() { report "$1" "OK: $2"; }
 report "OS" "$(uname -srm)"
 report "Architecture" "$(uname -m)"
 report "Execution stage" "${REMOTE_EXECUTION_STAGE}"
+report "Container runtime" "${CONTAINER_RUNTIME:-apptainer}"
+
+if [[ "${CONTAINER_RUNTIME:-apptainer}" == "docker-native" ]]; then
+  report "Nested container runtime" "disabled by design"
+  if remote_python -m alphapulldown_dnaaf_screen.native_cli \
+    --config "${REMOTE_ENV_FILE}" preflight; then
+    ok "Docker-native preflight" "runtime, stage, paths, image identity, and inputs"
+    echo "Remote environment validation passed."
+    exit 0
+  fi
+  fail "Docker-native preflight" "blocking validation failure"
+  echo "Blocking remote environment failures: ${FAILURES}" >&2
+  exit 2
+fi
 
 HAS_ENV_MANAGER=0
 if command -v mamba >/dev/null 2>&1; then

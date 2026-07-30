@@ -6,6 +6,12 @@ GPU inference consumes precomputed per-protein features and runs AlphaFold-Multi
 
 This stage requires Linux with NVIDIA CUDA. It must not be run on the local macOS machine.
 
+> **RunPod Milestone 2:** use
+> `scripts/remote/run_native_stage.sh --stage predict`. It directly invokes
+> `run_structure_prediction.py` inside the pinned Pod image after validating
+> all benchmark feature files. The Snakemake/SLURM material below is retained
+> for compatible non-RunPod environments.
+
 ## Execution Order
 
 1. Controls.

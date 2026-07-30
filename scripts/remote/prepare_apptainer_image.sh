@@ -13,6 +13,9 @@ Safely prepares the pinned AlphaFold2 Apptainer SIF before feature generation.
 It separates persistent cache/output on /workspace from temporary SIF
 construction on an explicit local build directory. It does not run Snakemake,
 feature generation, or inference.
+
+Historical non-RunPod path only. RunPod Pods must use the Docker-native runtime;
+this script never prepares a RunPod execution artifact.
 USAGE
 }
 

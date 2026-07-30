@@ -55,6 +55,12 @@ fi
 
 load_remote_env "${REMOTE_ENV_FILE}"
 require_linux
+if [[ "${CONTAINER_RUNTIME:-apptainer}" == "docker-native" ]]; then
+  echo "run_prediction.sh is the historical Snakemake/Apptainer path." >&2
+  echo "For RunPod Docker-native execution use:" >&2
+  echo "  bash scripts/remote/run_native_stage.sh --stage predict" >&2
+  exit 2
+fi
 REMOTE_EXECUTION_STAGE="${REMOTE_EXECUTION_STAGE:-gpu}"
 if [[ "${REMOTE_EXECUTION_STAGE}" != "gpu" ]]; then
   echo "run_prediction.sh requires REMOTE_EXECUTION_STAGE=gpu." >&2
