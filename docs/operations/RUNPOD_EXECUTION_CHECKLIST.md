@@ -1,5 +1,17 @@
 # RunPod Docker-Native Execution Checklist
 
+> **Superseded by the AWS route:** use
+> `docs/deployment/AWS_IMAGE_BUILD_GUIDE.md` for all future runtime work. The
+> material below is historical evidence only and must not be followed.
+
+> **Execution blocked:** the direct
+> `kosinskilab/alphafold2:2.5.0` proof of concept failed because the Pod did
+> not contain AlphaPulldown, the required CLIs, or JAX. Do not repeat Phase 0,
+> build the current derived Dockerfile, start another Pod, generate features,
+> or run inference. The replacement image must first pass the build and smoke
+> gates in
+> `docs/validation/RUNPOD_DOCKER_NATIVE_IMAGE_REAUDIT.md`.
+
 RunPod Pods use one native Docker image. They do not execute SIF files and do
 not launch Docker, Apptainer, Singularity, or Snakemake containers from inside
 the Pod.
@@ -19,9 +31,10 @@ The Chlamydomonas scenario remains blocked because versioned sequence records
 are absent. The 62-target manifest at
 `data/processed/fasta/fasta_manifest.tsv` is prohibited.
 
-## Phase 0 - Direct-image proof of concept
+## Phase 0 - Direct-image proof of concept (failed; do not repeat)
 
-Before building a derived image, start a short-lived GPU Pod using:
+This procedure is retained only as the record of the failed test. It is not a
+runnable instruction.
 
 ```text
 image: kosinskilab/alphafold2:2.5.0

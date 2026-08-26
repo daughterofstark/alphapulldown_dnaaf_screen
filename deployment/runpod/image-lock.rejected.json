@@ -1,0 +1,7 @@
+{
+  "status": "rejected",
+  "reason": "The direct RunPod image did not contain AlphaPulldown, JAX, or the required CLI commands in the real Pod test.",
+  "replacement": "deployment/aws/image-lock.json",
+  "historical_base_image": "kosinskilab/alphafold2:2.5.0",
+  "historical_base_image_digest": "sha256:434704a18e24d59de7cbfd6f7cdc310d5dce03ded6cf91c4927b6e2c9e87110c"
+}

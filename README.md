@@ -46,21 +46,11 @@ PYTHONPATH=src python -m alphapulldown_dnaaf_screen.cli build-screens
 PYTHONPATH=src python -m alphapulldown_dnaaf_screen.cli prepare-alphapulldown
 ```
 
-RunPod Docker-native Milestone 2 handoff commands:
+AWS candidate-image build documentation:
 
-```bash
-cp config/benchmarks/milestone2_remote.example.env config/remote/paths.env
-bash scripts/remote/validate_remote_environment.sh \
-  --env-file config/remote/paths.env
-bash scripts/remote/run_native_stage.sh \
-  --stage features \
-  --env-file config/remote/paths.env \
-  --dry-run
-```
-
-The Docker image must be built, published, and pinned before non-dry-run work.
-See
-[docs/software/RUNPOD_DOCKER_NATIVE_GUIDE.md](docs/software/RUNPOD_DOCKER_NATIVE_GUIDE.md).
+See [docs/deployment/AWS_IMAGE_BUILD_GUIDE.md](docs/deployment/AWS_IMAGE_BUILD_GUIDE.md).
+The candidate image must pass CPU and GPU no-data smoke tests before any
+feature generation or prediction work.
 
 ## Directory Structure
 

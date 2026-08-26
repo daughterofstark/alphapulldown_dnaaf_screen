@@ -1,0 +1,7 @@
+# Rejected historical build definition
+#
+# This file is retained only to document the failed RunPod direct-image
+# approach. Do not build or deploy it. The former base image did not expose
+# AlphaPulldown, JAX, or the required command-line tools in a real RunPod Pod.
+#
+# The active candidate build is deployment/aws/Dockerfile.

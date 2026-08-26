@@ -1,8 +1,13 @@
 # RunPod Docker-Native Migration Audit
 
-**Status:** approved design. Repository implementation was added without
-building an image, deploying a Pod, or changing biological inputs. Registry and
-runtime validation remain pending.
+**Status:** superseded and rejected after the direct-image RunPod proof of
+concept failed. Do not build or deploy the image described below. See
+`RUNPOD_DOCKER_NATIVE_IMAGE_REAUDIT.md` for the replacement source-artifact
+design and mandatory validation gates.
+
+The failed Pod did not contain AlphaPulldown, either required CLI, or JAX.
+Statements below describing `kosinskilab/alphafold2:2.5.0` as a suitable
+runtime are retained only as historical audit context.
 
 **Decision trigger:** RunPod support confirmed that Pods cannot execute Apptainer/Singularity SIFs, cannot enable unprivileged user namespaces, and cannot use Docker-in-Docker. The existing Apptainer/SIF handoff is therefore not executable on the target platform.
 

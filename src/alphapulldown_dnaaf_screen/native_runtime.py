@@ -29,8 +29,10 @@ from .validation import ValidationError, require
 DOCKER_NATIVE_RUNTIME = "docker-native"
 MILESTONE2_SCREEN = "milestone2"
 AF2_PIPELINE = "alphafold2"
-BASE_IMAGE = "kosinskilab/alphafold2:2.5.0"
-BASE_IMAGE_DIGEST = "sha256:434704a18e24d59de7cbfd6f7cdc310d5dce03ded6cf91c4927b6e2c9e87110c"
+BASE_IMAGE = "nvidia/cuda:12.2.2-cudnn8-runtime-ubuntu20.04"
+BASE_IMAGE_DIGEST = "sha256:1da6cf17f9c651323905c8cf5fd63a781a9a2fc0d28a477ca21df80a7bfaa00c"
+ALPHAPULLDOWN_SOURCE_REVISION = "1c99b15ce3fef42374c24a5bd83ce8241117d5f6"
+ALPHAPULLDOWN_WHEEL_SHA256 = "67a8496560fddf9c9570015bf88545e48502fad7cc12f995dc69a5999a0ad75a"
 UNBUILT_IMAGE_DIGEST = "UNBUILT"
 BLOCKED_SCENARIO_ID = "chlamy_dnaaf18_ift46_positive"
 FORBIDDEN_EXECUTABLES = {
@@ -230,6 +232,14 @@ def validate_image_lock(config: NativeRuntimeConfig) -> dict[str, object]:
         config.base_image_digest == BASE_IMAGE_DIGEST,
         "ALPHAPULLDOWN_BASE_IMAGE_DIGEST does not match the pinned image lock",
     )
+    require(
+        payload.get("alphapulldown_wheel_sha256") == ALPHAPULLDOWN_WHEEL_SHA256,
+        "Native image lock has wrong AlphaPulldown wheel checksum",
+    )
+    require(
+        payload.get("expected_alphapulldown_revision") == ALPHAPULLDOWN_SOURCE_REVISION,
+        "Native image lock has wrong AlphaPulldown source revision",
+    )
     return payload
 
 
@@ -409,16 +419,7 @@ def runtime_identity(
         except importlib.metadata.PackageNotFoundError:
             package_version = "not-installed"
     if source_revision is None:
-        try:
-            result = subprocess.run(
-                ["git", "-C", "/AlphaPulldown", "rev-parse", "HEAD"],
-                check=True,
-                text=True,
-                capture_output=True,
-            )
-            source_revision = result.stdout.strip()
-        except (FileNotFoundError, subprocess.CalledProcessError):
-            source_revision = "unknown"
+        source_revision = os.environ.get("ALPHAPULLDOWN_SOURCE_REVISION", "unknown")
     return {
         "base_image": BASE_IMAGE,
         "base_image_digest": config.base_image_digest,

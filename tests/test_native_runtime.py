@@ -10,6 +10,8 @@ from unittest import mock
 
 from alphapulldown_dnaaf_screen.native_cli import main as native_main
 from alphapulldown_dnaaf_screen.native_runtime import (
+    ALPHAPULLDOWN_SOURCE_REVISION,
+    ALPHAPULLDOWN_WHEEL_SHA256,
     BASE_IMAGE_DIGEST,
     FORBIDDEN_EXECUTABLES,
     UNBUILT_IMAGE_DIGEST,
@@ -46,7 +48,7 @@ def native_fixture(
     benchmark_inputs = benchmark_root / "alphapulldown_inputs"
     benchmark_fasta = benchmark_root / "fasta"
     fasta_dir = root / "data/processed/fasta"
-    deployment = root / "deployment/runpod"
+    deployment = root / "deployment/aws"
     for path in [benchmark_inputs, benchmark_fasta, fasta_dir, deployment]:
         path.mkdir(parents=True, exist_ok=True)
 
@@ -70,7 +72,7 @@ def native_fixture(
             fasta_dir / f"{record_id}.fasta",
         )
     shutil.copy2(
-        source_root / "deployment/runpod/image-lock.json",
+        source_root / "deployment/aws/image-lock.json",
         deployment / "image-lock.json",
     )
 
@@ -343,18 +345,41 @@ class DockerNativeRuntimeTests(unittest.TestCase):
             env = native_fixture(Path(tmp))
             self.assertEqual(native_main(["--config", str(env), "features", "--dry-run"]), 0)
 
-    def test_dockerfile_is_immutable_amd64_and_has_no_nested_runtime(self) -> None:
-        text = Path("deployment/runpod/Dockerfile").read_text(encoding="utf-8")
+    def test_aws_dockerfile_is_immutable_amd64_and_has_no_nested_runtime(self) -> None:
+        text = Path("deployment/aws/Dockerfile").read_text(encoding="utf-8")
         self.assertIn("FROM --platform=linux/amd64", text)
         self.assertIn(f"@{BASE_IMAGE_DIGEST}", text)
+        self.assertIn(ALPHAPULLDOWN_WHEEL_SHA256, text)
+        self.assertIn(ALPHAPULLDOWN_SOURCE_REVISION, text)
+        self.assertIn("smoke_cpu.py", text)
         self.assertIn('CMD ["sleep", "infinity"]', text)
-        for token in ["snakemake", "apptainer", "singularity", "docker.sock"]:
+        for token in ["git clone", "apptainer", "singularity", "docker.sock"]:
             self.assertNotIn(token, text.lower())
 
     def test_image_lock_starts_unbuilt(self) -> None:
-        payload = json.loads(Path("deployment/runpod/image-lock.json").read_text())
+        payload = json.loads(Path("deployment/aws/image-lock.json").read_text())
         self.assertEqual(payload["base_image_digest"], BASE_IMAGE_DIGEST)
         self.assertEqual(payload["derived_image_digest"], UNBUILT_IMAGE_DIGEST)
+        self.assertEqual(payload["alphapulldown_wheel_sha256"], ALPHAPULLDOWN_WHEEL_SHA256)
+        self.assertEqual(payload["expected_alphapulldown_revision"], ALPHAPULLDOWN_SOURCE_REVISION)
+
+    def test_rejected_runpod_dockerfile_cannot_be_accidentally_built(self) -> None:
+        self.assertFalse(Path("deployment/runpod/Dockerfile").exists())
+        self.assertFalse(Path("deployment/runpod/image-lock.json").exists())
+        text = Path("deployment/runpod/Dockerfile.rejected").read_text(encoding="utf-8")
+        self.assertIn("Do not build or deploy", text)
+
+    def test_aws_scripts_only_build_or_smoke_test_images(self) -> None:
+        build_script = Path("scripts/aws/build_candidate_image.sh").read_text(encoding="utf-8")
+        gpu_script = Path("scripts/aws/smoke_gpu_image.sh").read_text(encoding="utf-8")
+        self.assertIn("--platform linux/amd64", build_script)
+        self.assertIn("smoke_cpu.py", build_script)
+        self.assertIn("conda-explicit.txt", build_script)
+        self.assertIn("pip-freeze.txt", build_script)
+        self.assertIn("--gpus all", gpu_script)
+        for text in [build_script, gpu_script]:
+            self.assertNotIn("create_individual_features.py", text)
+            self.assertNotIn("run_structure_prediction.py", text)
 
     def test_legacy_runpod_wrappers_refuse_native_mode(self) -> None:
         for path in [

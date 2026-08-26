@@ -1,0 +1,14 @@
+{
+  "architecture": "linux/amd64",
+  "base_image": "nvidia/cuda:12.2.2-cudnn8-runtime-ubuntu20.04",
+  "base_image_digest": "sha256:1da6cf17f9c651323905c8cf5fd63a781a9a2fc0d28a477ca21df80a7bfaa00c",
+  "derived_image_digest": "UNBUILT",
+  "derived_image_reference": "REPLACE_WITH_ECR_URI/alphapulldown-af2:2.5.0-candidate",
+  "alphapulldown_wheel": "alphapulldown-2.5.0-py3-none-any.whl",
+  "alphapulldown_wheel_sha256": "67a8496560fddf9c9570015bf88545e48502fad7cc12f995dc69a5999a0ad75a",
+  "expected_alphapulldown_version": "2.5.0",
+  "expected_alphapulldown_revision": "1c99b15ce3fef42374c24a5bd83ce8241117d5f6",
+  "expected_jax_version": "0.5.3",
+  "upstream_snakemake_commit": "23cbba5f151f843d800b5cffaa7a3a3908c35d9e",
+  "upstream_snakemake_tag": "2.5.0"
+}
