@@ -49,11 +49,7 @@ RUN curl --fail --location --silent --show-error \
     && python -m pip install --no-cache-dir /tmp/alphapulldown-2.5.0-py3-none-any.whl \
     && python -m pip check
 
-WORKDIR /opt/alphapulldown-project
-COPY pyproject.toml README.md ./
-COPY src ./src
-RUN python -m pip install --no-cache-dir --no-deps . \
-    && mkdir -p /opt/alphapulldown-runtime \
+RUN mkdir -p /opt/alphapulldown-runtime \
     && micromamba list --explicit -p /opt/conda > /opt/alphapulldown-runtime/conda-explicit.txt \
     && python -m pip freeze --all > /opt/alphapulldown-runtime/pip-freeze.txt
 

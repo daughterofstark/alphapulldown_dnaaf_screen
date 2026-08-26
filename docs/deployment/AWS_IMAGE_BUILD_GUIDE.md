@@ -27,6 +27,11 @@ The image uses an immutable NVIDIA CUDA amd64 base and verifies the SHA-256 of
 the official AlphaPulldown 2.5.0 wheel. It does not rely on the rejected public
 `kosinskilab/alphafold2:2.5.0` image.
 
+The repository's planning package deliberately is not installed in this image:
+it requires Python 3.11 or later, while the pinned AlphaPulldown 2.5.0
+AlphaFold2 runtime uses Python 3.10. The candidate image contains only the
+AlphaPulldown runtime required for the smoke gates.
+
 The first build records the exact resolved Conda and pip packages inside the
 image at `/opt/alphapulldown-runtime/`. Those records must be copied out and
 reviewed before the candidate image is promoted as the scientific runtime.

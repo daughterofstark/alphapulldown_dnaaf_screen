@@ -361,6 +361,8 @@ class DockerNativeRuntimeTests(unittest.TestCase):
             "COPY --from=micromamba /usr/local/bin/micromamba",
             text,
         )
+        self.assertNotIn("python -m pip install --no-cache-dir --no-deps .", text)
+        self.assertNotIn("COPY pyproject.toml README.md", text)
         for token in ["git clone", "apptainer", "singularity", "docker.sock"]:
             self.assertNotIn(token, text.lower())
 
