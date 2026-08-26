@@ -28,7 +28,9 @@ ENV MAMBA_ROOT_PREFIX=/opt/mamba \
     PYTHONUNBUFFERED=1 \
     ALPHAPULLDOWN_SOURCE_REVISION=${ALPHAPULLDOWN_SOURCE_REVISION}
 
-COPY --from=micromamba /usr/local/bin/micromamba /usr/local/bin/micromamba
+# The pinned mambaorg/micromamba 2.5.0 image exposes its static binary at
+# /bin/micromamba (not /usr/local/bin/micromamba).
+COPY --from=micromamba /bin/micromamba /usr/local/bin/micromamba
 RUN test "${TARGETARCH:-amd64}" = "amd64" \
     && apt-get update \
     && DEBIAN_FRONTEND=noninteractive apt-get install -y --no-install-recommends \

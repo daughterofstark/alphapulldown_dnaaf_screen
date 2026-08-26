@@ -353,6 +353,14 @@ class DockerNativeRuntimeTests(unittest.TestCase):
         self.assertIn(ALPHAPULLDOWN_SOURCE_REVISION, text)
         self.assertIn("smoke_cpu.py", text)
         self.assertIn('CMD ["sleep", "infinity"]', text)
+        self.assertIn(
+            "COPY --from=micromamba /bin/micromamba /usr/local/bin/micromamba",
+            text,
+        )
+        self.assertNotIn(
+            "COPY --from=micromamba /usr/local/bin/micromamba",
+            text,
+        )
         for token in ["git clone", "apptainer", "singularity", "docker.sock"]:
             self.assertNotIn(token, text.lower())
 
