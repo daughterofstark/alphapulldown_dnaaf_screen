@@ -366,6 +366,17 @@ class DockerNativeRuntimeTests(unittest.TestCase):
         for token in ["git clone", "apptainer", "singularity", "docker.sock"]:
             self.assertNotIn(token, text.lower())
 
+    def test_aws_smoke_scripts_validate_help_output_not_only_exit_status(self) -> None:
+        for path, expected_flag in [
+            (Path("deployment/aws/smoke_cpu.py"), "--use_mmseqs2"),
+            (Path("deployment/aws/smoke_gpu.py"), "--output_directory"),
+        ]:
+            text = path.read_text(encoding="utf-8")
+            self.assertIn("result.returncode not in (0, 1)", text)
+            self.assertIn("stdout=subprocess.PIPE", text)
+            self.assertIn(expected_flag, text)
+            self.assertNotIn("check=True", text)
+
     def test_image_lock_starts_unbuilt(self) -> None:
         payload = json.loads(Path("deployment/aws/image-lock.json").read_text())
         self.assertEqual(payload["base_image_digest"], BASE_IMAGE_DIGEST)

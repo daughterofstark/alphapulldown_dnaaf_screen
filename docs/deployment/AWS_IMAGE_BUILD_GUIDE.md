@@ -48,7 +48,9 @@ bash scripts/aws/build_candidate_image.sh \
 
 This builds the image for `linux/amd64` and reruns its CPU smoke test. The
 smoke test checks AlphaPulldown 2.5.0, AlphaFold, ColabFold, JAX, OpenMM, the
-feature-generation module, and `create_individual_features.py --help`. It
+feature-generation module, and `create_individual_features.py --help`. The
+upstream CLI may return status `1` after printing valid help, so the smoke test
+also requires its `--use_mmseqs2` option to be present. It
 does not read project sequences, contact MMseqs2, create features, download
 model parameters, or predict structures.
 

@@ -7,6 +7,22 @@ import subprocess
 import sys
 
 
+def verify_help_command(command: list[str], expected_flag: str) -> None:
+    """Accept AlphaPulldown's observed non-zero help exit only with real help text."""
+    result = subprocess.run(
+        command,
+        check=False,
+        stdout=subprocess.PIPE,
+        stderr=subprocess.STDOUT,
+        text=True,
+    )
+    print(result.stdout, end="")
+    if result.returncode not in (0, 1) or expected_flag not in result.stdout:
+        raise RuntimeError(
+            f"CLI help contract failed for {' '.join(command)}: exit={result.returncode}"
+        )
+
+
 def main() -> int:
     expected_version = "2.5.0"
     installed_version = importlib.metadata.version("alphapulldown")
@@ -22,7 +38,10 @@ def main() -> int:
     import openmm  # noqa: F401
     import alphapulldown.scripts.create_individual_features  # noqa: F401
 
-    subprocess.run(["create_individual_features.py", "--help"], check=True)
+    verify_help_command(
+        ["create_individual_features.py", "--help"],
+        "--use_mmseqs2",
+    )
     print(f"CPU image smoke test passed: alphapulldown={installed_version}")
     return 0
 
