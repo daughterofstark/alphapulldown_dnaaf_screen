@@ -368,7 +368,7 @@ class DockerNativeRuntimeTests(unittest.TestCase):
 
     def test_aws_smoke_scripts_validate_help_output_not_only_exit_status(self) -> None:
         for path, expected_flag in [
-            (Path("deployment/aws/smoke_cpu.py"), "--use_mmseqs2"),
+            (Path("deployment/aws/smoke_cpu.py"), "use_mmseqs2"),
             (Path("deployment/aws/smoke_gpu.py"), "--output_directory"),
         ]:
             text = path.read_text(encoding="utf-8")

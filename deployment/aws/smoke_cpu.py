@@ -40,7 +40,7 @@ def main() -> int:
 
     verify_help_command(
         ["create_individual_features.py", "--help"],
-        "--use_mmseqs2",
+        "use_mmseqs2",
     )
     print(f"CPU image smoke test passed: alphapulldown={installed_version}")
     return 0
