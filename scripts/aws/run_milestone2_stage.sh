@@ -57,6 +57,15 @@ set +a
 command -v docker >/dev/null || { echo "Docker is required." >&2; exit 2; }
 if [[ "${STAGE}" == "predict" ]]; then
   command -v nvidia-smi >/dev/null || { echo "Prediction requires nvidia-smi." >&2; exit 2; }
+  [[ -n "${BACKEND_WEIGHTS_DIR:-}" ]] || {
+    echo "Prediction requires BACKEND_WEIGHTS_DIR to name the AlphaFold2 model-weights directory." >&2
+    exit 2
+  }
+  [[ -d "${BACKEND_WEIGHTS_DIR}" ]] || {
+    echo "Prediction model-weights directory does not exist on the host: ${BACKEND_WEIGHTS_DIR}" >&2
+    exit 2
+  }
+  BACKEND_WEIGHTS_DIR="$(cd "${BACKEND_WEIGHTS_DIR}" && pwd -P)"
 fi
 
 IMAGE_ID="$(docker image inspect --format '{{.Id}}' "${NATIVE_IMAGE_REFERENCE}" 2>/dev/null)" || {
@@ -81,7 +90,10 @@ DOCKER_COMMAND=(
   --volume "${PROJECT_ROOT}:${PROJECT_ROOT}"
 )
 if [[ "${STAGE}" == "predict" ]]; then
-  DOCKER_COMMAND+=(--gpus all)
+  DOCKER_COMMAND+=(
+    --gpus all
+    --volume "${BACKEND_WEIGHTS_DIR}:${BACKEND_WEIGHTS_DIR}:ro"
+  )
 fi
 DOCKER_COMMAND+=(
   "${NATIVE_IMAGE_REFERENCE}"
