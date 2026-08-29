@@ -491,7 +491,7 @@ def write_native_provenance(
         require(path.is_file(), f"Provenance input is missing: {path}")
     payload: dict[str, object] = {
         "run_id": run_id,
-        "utc_timestamp": dt.datetime.now(dt.UTC).isoformat(),
+        "utc_timestamp": dt.datetime.now(dt.timezone.utc).isoformat(),
         "status": status,
         "dry_run": dry_run,
         "stage_command": stage_command,

@@ -97,7 +97,7 @@ def _expand_env_value(value: str, values: dict[str, str]) -> str:
 
 
 def stable_run_id(prefix: str, *, screen: str | None = None, timestamp: str | None = None) -> str:
-    stamp = timestamp or dt.datetime.now(dt.UTC).strftime("%Y%m%dT%H%M%SZ")
+    stamp = timestamp or dt.datetime.now(dt.timezone.utc).strftime("%Y%m%dT%H%M%SZ")
     pieces = [prefix]
     if screen:
         pieces.append(screen)
@@ -830,7 +830,7 @@ def create_run_provenance(
     output_dir.mkdir(parents=True, exist_ok=True)
     payload = {
         "run_id": run_id,
-        "utc_timestamp": dt.datetime.now(dt.UTC).isoformat(),
+        "utc_timestamp": dt.datetime.now(dt.timezone.utc).isoformat(),
         "git": git_metadata(config.project_root),
         "command": command,
         "command_string": shell_join(command),

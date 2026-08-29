@@ -134,6 +134,16 @@ class RemoteHandoffTests(unittest.TestCase):
             "prediction-controls-20260713T000000Z",
         )
 
+    def test_runtime_helpers_remain_compatible_with_python_310(self) -> None:
+        for path in [
+            Path("src/alphapulldown_dnaaf_screen/remote.py"),
+            Path("src/alphapulldown_dnaaf_screen/provenance.py"),
+            Path("src/alphapulldown_dnaaf_screen/native_runtime.py"),
+        ]:
+            text = path.read_text(encoding="utf-8")
+            self.assertNotIn("dt.UTC", text)
+            self.assertIn("dt.timezone.utc", text)
+
     def test_command_construction(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
             config = load_remote_config(write_fixture(Path(tmp)))

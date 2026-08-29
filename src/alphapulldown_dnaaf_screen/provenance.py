@@ -71,7 +71,7 @@ class Provenance:
         if self.config_path:
             config = {"path": str(self.config_path), "sha256": sha256_file(self.config_path)}
         payload = {
-            "utc_timestamp": dt.datetime.now(dt.UTC).isoformat(),
+            "utc_timestamp": dt.datetime.now(dt.timezone.utc).isoformat(),
             "command": self.command,
             "package_version": __version__,
             "git": git_metadata(self.cwd),
