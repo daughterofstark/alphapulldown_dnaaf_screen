@@ -8,6 +8,7 @@ import importlib.metadata
 import json
 import os
 import platform
+import re
 import shutil
 import subprocess
 from dataclasses import dataclass
@@ -16,7 +17,6 @@ from typing import Callable, Sequence
 
 from .provenance import git_metadata, sha256_file
 from .remote import (
-    MMS2_AF2_FEATURE_PATTERN,
     parse_env_file,
     read_fasta_manifest,
     read_milestone2_sample_sheet,
@@ -29,6 +29,10 @@ from .validation import ValidationError, require
 DOCKER_NATIVE_RUNTIME = "docker-native"
 MILESTONE2_SCREEN = "milestone2"
 AF2_PIPELINE = "alphafold2"
+# AlphaPulldown names an AF2 feature from the normalized FASTA header
+# identifier, not our internal record ID. The benchmark headers deliberately
+# include the accession, so retaining this distinction is required for reuse.
+NATIVE_MMS2_AF2_FEATURE_PATTERN = "{fasta_identifier}.pkl.xz"
 BASE_IMAGE = "nvidia/cuda:12.2.2-cudnn8-runtime-ubuntu20.04"
 BASE_IMAGE_DIGEST = "sha256:1da6cf17f9c651323905c8cf5fd63a781a9a2fc0d28a477ca21df80a7bfaa00c"
 ALPHAPULLDOWN_SOURCE_REVISION = "1c99b15ce3fef42374c24a5bd83ce8241117d5f6"
@@ -106,9 +110,9 @@ class NativeRuntimeConfig:
             "Docker-native Milestone 2 requires FEATURE_MODE=mmseqs2",
         )
         require(
-            values.get("FEATURE_FILE_PATTERN", MMS2_AF2_FEATURE_PATTERN)
-            == MMS2_AF2_FEATURE_PATTERN,
-            "Docker-native Milestone 2 requires .pkl.xz feature files",
+            values.get("FEATURE_FILE_PATTERN", NATIVE_MMS2_AF2_FEATURE_PATTERN)
+            == NATIVE_MMS2_AF2_FEATURE_PATTERN,
+            "Docker-native Milestone 2 requires AlphaPulldown FASTA-identifier .pkl.xz feature files",
         )
         data_pipeline = values.get("NATIVE_DATA_PIPELINE", AF2_PIPELINE).lower()
         fold_backend = values.get("NATIVE_FOLD_BACKEND", AF2_PIPELINE).lower()
@@ -143,7 +147,7 @@ class NativeRuntimeConfig:
             provenance_dir=_required_path(values, "PROVENANCE_DIR"),
             image_lock=_required_path(values, "NATIVE_IMAGE_LOCK"),
             feature_mode="mmseqs2",
-            feature_pattern=MMS2_AF2_FEATURE_PATTERN,
+            feature_pattern=NATIVE_MMS2_AF2_FEATURE_PATTERN,
             data_pipeline=data_pipeline,
             fold_backend=fold_backend,
             base_image_digest=values.get("ALPHAPULLDOWN_BASE_IMAGE_DIGEST", ""),
@@ -270,6 +274,31 @@ def _fasta_paths(config: NativeRuntimeConfig) -> dict[str, Path]:
     return paths
 
 
+def _feature_path(
+    config: NativeRuntimeConfig, *, record_id: str, fasta_path: Path
+) -> Path:
+    """Return the exact AlphaPulldown AF2 feature path for one benchmark FASTA."""
+
+    identifier = _alphapulldown_fasta_identifier(fasta_path)
+
+    return config.feature_dir / config.feature_pattern.format(
+        record_id=record_id,
+        fasta_identifier=identifier,
+    )
+
+
+def _alphapulldown_fasta_identifier(fasta_path: Path) -> str:
+    """Mirror the normalized identifier observed in AlphaPulldown AF2 outputs."""
+
+    for line in fasta_path.read_text(encoding="utf-8").splitlines():
+        if line.startswith(">"):
+            identifier = line[1:].split(maxsplit=1)[0]
+            normalized = re.sub(r"[^A-Za-z0-9_.-]+", "_", identifier).strip("_")
+            require(bool(normalized), f"FASTA header has no usable identifier: {fasta_path}")
+            return normalized
+    raise ValidationError(f"Missing FASTA header: {fasta_path}")
+
+
 def feature_commands(config: NativeRuntimeConfig) -> list[list[str]]:
     validate_stage(config, command="features")
     commands: list[list[str]] = []
@@ -288,7 +317,9 @@ def feature_commands(config: NativeRuntimeConfig) -> list[list[str]]:
             "--skip_existing=True",
         ]
         _validate_native_command(command)
-        expected = config.feature_dir / config.feature_pattern.format(record_id=record_id)
+        expected = _feature_path(
+            config, record_id=record_id, fasta_path=fasta_path
+        )
         require(
             expected.suffixes[-2:] == [".pkl", ".xz"],
             f"Unexpected feature target for {record_id}: {expected}",
@@ -313,8 +344,8 @@ def prediction_commands(config: NativeRuntimeConfig) -> list[list[str]]:
                 record_id in fasta_paths,
                 f"Scenario record is absent from manifest: {record_id}",
             )
-            feature_path = config.feature_dir / config.feature_pattern.format(
-                record_id=record_id
+            feature_path = _feature_path(
+                config, record_id=record_id, fasta_path=fasta_paths[record_id]
             )
             require(feature_path.is_file(), f"Missing required AF2 feature file: {feature_path}")
         output_path = config.output_dir / "predictions" / scenario_id
@@ -469,8 +500,10 @@ def _plan_input_paths(config: NativeRuntimeConfig, *, command: str) -> list[Path
     if command == "features":
         paths.extend(_fasta_paths(config).values())
     else:
-        for record_id in sorted(_manifest_rows(config)):
-            paths.append(config.feature_dir / config.feature_pattern.format(record_id=record_id))
+        for record_id, fasta_path in sorted(_fasta_paths(config).items()):
+            paths.append(
+                _feature_path(config, record_id=record_id, fasta_path=fasta_path)
+            )
     return paths
 
 

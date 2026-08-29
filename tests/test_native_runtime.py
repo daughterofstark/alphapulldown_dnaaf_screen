@@ -85,7 +85,7 @@ def native_fixture(
                 "CONTAINER_RUNTIME=docker-native",
                 "PYTHON_BIN=python3",
                 "FEATURE_MODE=mmseqs2",
-                "FEATURE_FILE_PATTERN={record_id}.pkl.xz",
+                "FEATURE_FILE_PATTERN={fasta_identifier}.pkl.xz",
                 "NATIVE_DATA_PIPELINE=alphafold2",
                 "NATIVE_FOLD_BACKEND=alphafold2",
                 "NATIVE_ENABLE_ALPHAJUDGE=false",
@@ -118,7 +118,11 @@ def create_features(config) -> None:
     manifest = config.fasta_manifest.read_text(encoding="utf-8").splitlines()[1:]
     for row in manifest:
         record_id = row.split("\t", 1)[0]
-        (config.feature_dir / f"{record_id}.pkl.xz").write_bytes(b"feature")
+        accession = row.split("\t")[1]
+        display_name = record_id.removeprefix("HUMAN_")
+        (config.feature_dir / f"{record_id}_{accession}_{display_name}.pkl.xz").write_bytes(
+            b"feature"
+        )
 
 
 class DockerNativeRuntimeTests(unittest.TestCase):
@@ -126,7 +130,7 @@ class DockerNativeRuntimeTests(unittest.TestCase):
         with tempfile.TemporaryDirectory() as tmp:
             config = load_native_config(native_fixture(Path(tmp)))
             self.assertEqual(config.container_runtime, "docker-native")
-            self.assertEqual(config.feature_pattern, "{record_id}.pkl.xz")
+            self.assertEqual(config.feature_pattern, "{fasta_identifier}.pkl.xz")
             self.assertIn("benchmarks/fasta", str(config.fasta_manifest))
             self.assertNotEqual(
                 config.fasta_manifest,
@@ -230,6 +234,18 @@ class DockerNativeRuntimeTests(unittest.TestCase):
                 self.assertIn("--fold_backend=alphafold2", command)
                 self.assertNotIn("chlamy_dnaaf18_ift46_positive", " ".join(command))
                 self.assertNotIn("alphajudge", " ".join(command).lower())
+
+    def test_prediction_uses_real_alphapulldown_fasta_identifier_feature_names(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            config = load_native_config(native_fixture(Path(tmp), stage="gpu"))
+            create_features(config)
+            prediction_commands(config)
+            self.assertTrue(
+                (
+                    config.feature_dir / "HUMAN_IFT80_Q9P2H3_IFT80.pkl.xz"
+                ).is_file()
+            )
+            self.assertFalse((config.feature_dir / "HUMAN_IFT80.pkl.xz").exists())
 
     def test_prediction_refuses_missing_features(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
