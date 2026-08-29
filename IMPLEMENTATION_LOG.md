@@ -84,3 +84,32 @@ Next steps:
 
 - Commit the compatibility audit and remote wrapper corrections.
 - On Linux, deploy the pinned workflow, validate the environment, and run the wrapper dry runs before any real feature generation or inference.
+
+## 2026-08-29
+
+Task: Validate the Docker-native AlphaPulldown runtime on AWS EC2.
+
+Result:
+
+- Built `alphapulldown-af2:candidate` on an AWS CPU instance and passed the
+  no-data CPU smoke test for AlphaPulldown 2.5.0 and its feature CLI.
+- Changed the same EBS-backed instance to AWS `g5.xlarge`, installed the AWS
+  NVIDIA driver and NVIDIA Container Toolkit, and passed Docker GPU exposure.
+- Passed the no-data GPU smoke test: JAX 0.5.3 detected `CudaDevice(id=0)` on
+  an NVIDIA A10G and the AlphaPulldown prediction CLI loaded.
+- Recorded the local Docker image ID and validation evidence in
+  `deployment/aws/image-lock.json` and `docs/validation/AWS_RUNTIME_VALIDATION.md`.
+- Added a benchmark-only AWS Docker launcher and local configuration generator;
+  their first supported invocation is a dry-run.
+
+Issues:
+
+- The validated image is stored only on the existing EC2 EBS volume. It is not
+  an ECR artifact and must not be assumed to exist on other hosts.
+- The instance is stopped after validation to avoid GPU charges.
+
+Next steps:
+
+- Resume the same instance as CPU-only and run the benchmark feature dry-run.
+- Run feature generation only after explicit approval; return to `g5.xlarge`
+  only when prediction preflight is needed.

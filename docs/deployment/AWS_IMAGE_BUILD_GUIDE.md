@@ -1,8 +1,7 @@
 # AWS Image Build Guide
 
 This is the AWS route for the isolated Milestone 2 AlphaPulldown benchmark.
-It does not authorise feature generation or prediction until the candidate image
-passes both smoke tests.
+Feature generation and prediction remain separate, explicitly approved stages.
 
 ## What AWS is for
 
@@ -33,8 +32,21 @@ AlphaFold2 runtime uses Python 3.10. The candidate image contains only the
 AlphaPulldown runtime required for the smoke gates.
 
 The first build records the exact resolved Conda and pip packages inside the
-image at `/opt/alphapulldown-runtime/`. Those records must be copied out and
-reviewed before the candidate image is promoted as the scientific runtime.
+image at `/opt/alphapulldown-runtime/`.
+
+## Completed validation
+
+On 2026-08-29, the local image `alphapulldown-af2:candidate` passed both
+no-data smoke gates on AWS EC2. The Docker local image ID is recorded in
+`deployment/aws/image-lock.json`:
+
+- CPU gate: AlphaPulldown `2.5.0`, AlphaFold dependencies, and
+  `create_individual_features.py` loaded successfully.
+- GPU gate: an AWS `g5.xlarge` NVIDIA A10G was passed into Docker; JAX `0.5.3`
+  reported `CudaDevice(id=0)` and `run_structure_prediction.py` loaded.
+
+This proves the runtime can execute AlphaPulldown on the target platform. It
+does not constitute a feature-generation or prediction result.
 
 ## CPU build gate
 
@@ -71,8 +83,45 @@ This runs `nvidia-smi`, confirms JAX 0.5.3 sees an NVIDIA GPU, imports the
 prediction module, and runs `run_structure_prediction.py --help`. It uses no
 biological data and starts no AlphaFold prediction.
 
-Only after this succeeds should the derived image digest be copied into
-`deployment/aws/image-lock.json` and the Milestone 2 remote configuration.
+The resulting local Docker image ID is now locked in
+`deployment/aws/image-lock.json`. It is an image ID on the existing EC2 disk,
+not an ECR registry digest; do not assume it exists on a different machine.
+
+## Safe AWS resume and dry-run
+
+The validated image remains on the EC2 instance's EBS volume while the
+instance is stopped. For CPU feature work, change the same instance back to a
+CPU type such as `c6i.xlarge` before starting it; this avoids paying for an
+idle GPU during the MMseqs2 feature stage. Once connected to that instance:
+
+```bash
+cd ~/alphapulldown_dnaaf_screen
+git pull --ff-only origin feature/alphapulldown-implementation
+bash scripts/aws/configure_milestone2_runtime.sh
+bash scripts/aws/run_milestone2_stage.sh --stage features --dry-run
+```
+
+The dry-run starts the validated Docker image only to validate its identity,
+mount the benchmark-only paths, render the nine individual AF2/MMseqs2 feature
+commands, and write dry-run provenance. It does not contact MMseqs2 or write
+feature files.
+
+Only after review and explicit approval, the CPU feature-generation command is:
+
+```bash
+bash scripts/aws/run_milestone2_stage.sh --stage features
+```
+
+For later GPU prediction, change the same stopped instance back to `g5.xlarge`,
+then run a prediction dry-run before any prediction command:
+
+```bash
+bash scripts/aws/run_milestone2_stage.sh --stage predict --dry-run
+```
+
+The wrapper bind-mounts the checkout at its identical absolute host path. It
+rejects a mismatched image ID, non-benchmark manifests, AF3 selectors,
+AlphaJudge, the blocked Chlamydomonas scenario, and the 62-target manifest.
 
 ## Not yet allowed
 

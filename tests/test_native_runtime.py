@@ -377,10 +377,17 @@ class DockerNativeRuntimeTests(unittest.TestCase):
             self.assertIn(expected_flag, text)
             self.assertNotIn("check=True", text)
 
-    def test_image_lock_starts_unbuilt(self) -> None:
+    def test_image_lock_records_successful_aws_smoke_validation(self) -> None:
         payload = json.loads(Path("deployment/aws/image-lock.json").read_text())
         self.assertEqual(payload["base_image_digest"], BASE_IMAGE_DIGEST)
-        self.assertEqual(payload["derived_image_digest"], UNBUILT_IMAGE_DIGEST)
+        self.assertEqual(
+            payload["derived_image_digest"],
+            "sha256:458537ff9ac8363406f0ce545c74d5a954595de651f1a0dc770577ec49e70759",
+        )
+        self.assertEqual(payload["derived_image_identity_kind"], "docker-local-image-id")
+        self.assertEqual(payload["derived_image_reference"], "alphapulldown-af2:candidate")
+        self.assertEqual(payload["validated_on"], "2026-08-29")
+        self.assertIn("GPU smoke test", payload["validation_checks"][1])
         self.assertEqual(payload["alphapulldown_wheel_sha256"], ALPHAPULLDOWN_WHEEL_SHA256)
         self.assertEqual(payload["expected_alphapulldown_revision"], ALPHAPULLDOWN_SOURCE_REVISION)
 
@@ -401,6 +408,28 @@ class DockerNativeRuntimeTests(unittest.TestCase):
         for text in [build_script, gpu_script]:
             self.assertNotIn("create_individual_features.py", text)
             self.assertNotIn("run_structure_prediction.py", text)
+
+    def test_aws_stage_wrapper_uses_validated_image_and_benchmark_mount(self) -> None:
+        wrapper = Path("scripts/aws/run_milestone2_stage.sh").read_text(encoding="utf-8")
+        configure = Path("scripts/aws/configure_milestone2_runtime.sh").read_text(
+            encoding="utf-8"
+        )
+        template = Path("config/benchmarks/milestone2_aws.example.env").read_text(
+            encoding="utf-8"
+        )
+        self.assertIn("docker image inspect", wrapper)
+        self.assertIn("ALPHAPULLDOWN_DERIVED_IMAGE_DIGEST", wrapper)
+        self.assertIn("--volume", wrapper)
+        self.assertIn("--user", wrapper)
+        self.assertIn("--gpus all", wrapper)
+        self.assertIn("alphapulldown_dnaaf_screen.native_cli", wrapper)
+        self.assertNotIn("snakemake --", wrapper.lower())
+        self.assertNotIn("apptainer exec", wrapper.lower())
+        self.assertIn("Refusing to overwrite", configure)
+        self.assertIn("__PROJECT_ROOT__", template)
+        self.assertIn('NATIVE_IMAGE_REFERENCE="alphapulldown-af2:candidate"', template)
+        self.assertIn("benchmarks/fasta/fasta_manifest.tsv", template)
+        self.assertNotIn("data/processed/fasta/fasta_manifest.tsv", template)
 
     def test_legacy_runpod_wrappers_refuse_native_mode(self) -> None:
         for path in [
