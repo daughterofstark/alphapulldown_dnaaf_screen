@@ -27,6 +27,11 @@ def build_parser() -> argparse.ArgumentParser:
     for name in ("features", "predict"):
         stage = subparsers.add_parser(name)
         stage.add_argument("--dry-run", action="store_true")
+        if name == "predict":
+            stage.add_argument(
+                "--scenario",
+                help="Run one permitted Milestone 2 scenario instead of all eight.",
+            )
     subparsers.add_parser("validate")
     subparsers.add_parser("preflight")
     return parser
@@ -54,7 +59,9 @@ def run(args: argparse.Namespace) -> int:
 
     dry_run = bool(args.dry_run)
     validate_host_runtime(config, command=args.command, dry_run=dry_run)
-    run_id, commands = plan_native_run(config, command=args.command)
+    run_id, commands = plan_native_run(
+        config, command=args.command, scenario_id=getattr(args, "scenario", None)
+    )
     identity = runtime_identity(config)
     validate_runtime_identity(config, identity, allow_uninstalled=dry_run)
     write_native_provenance(

@@ -328,7 +328,9 @@ def feature_commands(config: NativeRuntimeConfig) -> list[list[str]]:
     return commands
 
 
-def prediction_commands(config: NativeRuntimeConfig) -> list[list[str]]:
+def prediction_commands(
+    config: NativeRuntimeConfig, *, scenario_id: str | None = None
+) -> list[list[str]]:
     validate_stage(config, command="predict")
     require(
         config.backend_weights_dir is not None,
@@ -340,10 +342,19 @@ def prediction_commands(config: NativeRuntimeConfig) -> list[list[str]]:
     )
     fasta_paths = _fasta_paths(config)
     commands: list[list[str]] = []
-    for row in read_milestone2_sample_sheet(config.input_dir):
-        scenario_id = row["scenario_id"]
+    if scenario_id == BLOCKED_SCENARIO_ID:
+        raise ValidationError(
+            f"{BLOCKED_SCENARIO_ID} is blocked because versioned sequence records are absent"
+        )
+    rows = read_milestone2_sample_sheet(config.input_dir)
+    if scenario_id is not None:
+        rows = [row for row in rows if row["scenario_id"] == scenario_id]
+        require(bool(rows), f"Unknown or non-runnable Milestone 2 scenario: {scenario_id}")
+
+    for row in rows:
+        selected_scenario_id = row["scenario_id"]
         require(
-            scenario_id != BLOCKED_SCENARIO_ID,
+            selected_scenario_id != BLOCKED_SCENARIO_ID,
             f"{BLOCKED_SCENARIO_ID} is blocked because versioned sequence records are absent",
         )
         record_ids = [item for item in row["record_ids"].split("+") if item]
@@ -360,7 +371,7 @@ def prediction_commands(config: NativeRuntimeConfig) -> list[list[str]]:
             _alphapulldown_fasta_identifier(fasta_paths[record_id])
             for record_id in record_ids
         ]
-        output_path = config.output_dir / "predictions" / scenario_id
+        output_path = config.output_dir / "predictions" / selected_scenario_id
         command = [
             "run_structure_prediction.py",
             f"--input={'+'.join(feature_identifiers)}",
@@ -585,8 +596,17 @@ def execute_commands(
 
 
 def plan_native_run(
-    config: NativeRuntimeConfig, *, command: str
+    config: NativeRuntimeConfig, *, command: str, scenario_id: str | None = None
 ) -> tuple[str, list[list[str]]]:
-    run_id = stable_run_id("native", screen=f"milestone2-{command}")
-    commands = feature_commands(config) if command == "features" else prediction_commands(config)
+    require(
+        command == "predict" or scenario_id is None,
+        "--scenario is supported only for prediction",
+    )
+    screen = f"milestone2-{command}" + (f"-{scenario_id}" if scenario_id else "")
+    run_id = stable_run_id("native", screen=screen)
+    commands = (
+        feature_commands(config)
+        if command == "features"
+        else prediction_commands(config, scenario_id=scenario_id)
+    )
     return run_id, commands

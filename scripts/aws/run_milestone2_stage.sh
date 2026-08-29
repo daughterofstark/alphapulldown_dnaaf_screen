@@ -3,7 +3,7 @@ set -euo pipefail
 
 usage() {
   cat <<'USAGE'
-Usage: run_milestone2_stage.sh --stage features|predict [--dry-run] [--config PATH]
+Usage: run_milestone2_stage.sh --stage features|predict [--scenario ID] [--dry-run] [--config PATH]
 
 Runs one isolated Milestone 2 stage inside the validated local Docker image.
 The host Docker daemon launches the image once; the container never invokes
@@ -15,10 +15,12 @@ USAGE
 STAGE=""
 DRY_RUN=0
 CONFIG_PATH=""
+SCENARIO=""
 while [[ $# -gt 0 ]]; do
   case "$1" in
     --stage) STAGE="${2:-}"; shift 2 ;;
     --dry-run) DRY_RUN=1; shift ;;
+    --scenario) SCENARIO="${2:-}"; shift 2 ;;
     --config) CONFIG_PATH="${2:-}"; shift 2 ;;
     --help|-h) usage; exit 0 ;;
     *) echo "Unknown argument: $1" >&2; usage >&2; exit 2 ;;
@@ -29,6 +31,10 @@ case "${STAGE}" in
   features|predict) ;;
   *) echo "--stage must be features or predict" >&2; exit 2 ;;
 esac
+if [[ -n "${SCENARIO}" && "${STAGE}" != "predict" ]]; then
+  echo "--scenario is supported only with --stage predict" >&2
+  exit 2
+fi
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 PROJECT_ROOT="$(cd "${SCRIPT_DIR}/../.." && pwd -P)"
@@ -100,6 +106,9 @@ DOCKER_COMMAND+=(
   python -m alphapulldown_dnaaf_screen.native_cli
   --config "${CONFIG_PATH}" "${STAGE}"
 )
+if [[ -n "${SCENARIO}" ]]; then
+  DOCKER_COMMAND+=(--scenario "${SCENARIO}")
+fi
 if [[ "${DRY_RUN}" == "1" ]]; then
   DOCKER_COMMAND+=(--dry-run)
 fi

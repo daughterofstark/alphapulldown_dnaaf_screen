@@ -239,6 +239,23 @@ class DockerNativeRuntimeTests(unittest.TestCase):
                 self.assertNotRegex(input_argument, r"(?:=|\\+)HUMAN_[A-Z0-9]+(?=\\+|$)")
                 self.assertRegex(input_argument, r"HUMAN_[A-Z0-9]+_[A-Z0-9]+_[A-Z0-9]+")
 
+    def test_prediction_can_select_one_permitted_scenario(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            config = load_native_config(native_fixture(Path(tmp), stage="gpu"))
+            create_features(config)
+            commands = prediction_commands(
+                config, scenario_id="human_dnaaf18_ift46_negative"
+            )
+            self.assertEqual(len(commands), 1)
+            self.assertIn(
+                "human_dnaaf18_ift46_negative",
+                " ".join(commands[0]),
+            )
+            with self.assertRaisesRegex(ValidationError, "blocked"):
+                prediction_commands(
+                    config, scenario_id="chlamy_dnaaf18_ift46_positive"
+                )
+
     def test_prediction_uses_real_alphapulldown_fasta_identifier_feature_names(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
             config = load_native_config(native_fixture(Path(tmp), stage="gpu"))
