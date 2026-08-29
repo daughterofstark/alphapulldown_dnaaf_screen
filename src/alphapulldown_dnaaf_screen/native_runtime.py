@@ -348,10 +348,14 @@ def prediction_commands(config: NativeRuntimeConfig) -> list[list[str]]:
                 config, record_id=record_id, fasta_path=fasta_paths[record_id]
             )
             require(feature_path.is_file(), f"Missing required AF2 feature file: {feature_path}")
+        feature_identifiers = [
+            _alphapulldown_fasta_identifier(fasta_paths[record_id])
+            for record_id in record_ids
+        ]
         output_path = config.output_dir / "predictions" / scenario_id
         command = [
             "run_structure_prediction.py",
-            f"--input={'+'.join(record_ids)}",
+            f"--input={'+'.join(feature_identifiers)}",
             f"--output_directory={output_path}",
             "--protein_delimiter=+",
             f"--data_directory={config.backend_weights_dir or ''}",

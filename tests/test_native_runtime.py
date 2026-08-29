@@ -234,6 +234,9 @@ class DockerNativeRuntimeTests(unittest.TestCase):
                 self.assertIn("--fold_backend=alphafold2", command)
                 self.assertNotIn("chlamy_dnaaf18_ift46_positive", " ".join(command))
                 self.assertNotIn("alphajudge", " ".join(command).lower())
+                input_argument = next(arg for arg in command if arg.startswith("--input="))
+                self.assertNotRegex(input_argument, r"(?:=|\\+)HUMAN_[A-Z0-9]+(?=\\+|$)")
+                self.assertRegex(input_argument, r"HUMAN_[A-Z0-9]+_[A-Z0-9]+_[A-Z0-9]+")
 
     def test_prediction_uses_real_alphapulldown_fasta_identifier_feature_names(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
@@ -246,6 +249,17 @@ class DockerNativeRuntimeTests(unittest.TestCase):
                 ).is_file()
             )
             self.assertFalse((config.feature_dir / "HUMAN_IFT80.pkl.xz").exists())
+
+    def test_prediction_uses_feature_identifiers_not_internal_record_ids(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            config = load_native_config(native_fixture(Path(tmp), stage="gpu"))
+            create_features(config)
+            commands = prediction_commands(config)
+            first_input = next(arg for arg in commands[0] if arg.startswith("--input="))
+            self.assertEqual(
+                first_input,
+                "--input=HUMAN_DNAAF18_Q8N136_DNAAF18+HUMAN_IFT46_Q9NQC8_IFT46",
+            )
 
     def test_prediction_refuses_missing_features(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
