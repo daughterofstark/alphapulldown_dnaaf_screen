@@ -233,6 +233,7 @@ class DockerNativeRuntimeTests(unittest.TestCase):
             for command in commands:
                 self.assertEqual(command[0], "run_structure_prediction.py")
                 self.assertIn("--fold_backend=alphafold2", command)
+                self.assertIn("--convert_to_modelcif=False", command)
                 self.assertNotIn("chlamy_dnaaf18_ift46_positive", " ".join(command))
                 self.assertNotIn("alphajudge", " ".join(command).lower())
                 input_argument = next(arg for arg in command if arg.startswith("--input="))

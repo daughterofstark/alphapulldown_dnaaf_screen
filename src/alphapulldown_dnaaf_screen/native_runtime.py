@@ -380,6 +380,9 @@ def prediction_commands(
             f"--data_directory={config.backend_weights_dir}",
             f"--features_directory={config.feature_dir}",
             "--fold_backend=alphafold2",
+            # The MMseqs2 feature metadata contains fields unsupported by the
+            # optional ModelCIF converter; PDB and confidence outputs remain.
+            "--convert_to_modelcif=False",
         ]
         _validate_native_command(command)
         commands.append(command)
