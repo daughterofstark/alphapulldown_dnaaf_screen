@@ -330,6 +330,14 @@ def feature_commands(config: NativeRuntimeConfig) -> list[list[str]]:
 
 def prediction_commands(config: NativeRuntimeConfig) -> list[list[str]]:
     validate_stage(config, command="predict")
+    require(
+        config.backend_weights_dir is not None,
+        "Prediction requires BACKEND_WEIGHTS_DIR to name the AlphaFold2 model-weights directory",
+    )
+    require(
+        config.backend_weights_dir.is_dir(),
+        f"Prediction model-weights directory does not exist: {config.backend_weights_dir}",
+    )
     fasta_paths = _fasta_paths(config)
     commands: list[list[str]] = []
     for row in read_milestone2_sample_sheet(config.input_dir):
@@ -358,7 +366,7 @@ def prediction_commands(config: NativeRuntimeConfig) -> list[list[str]]:
             f"--input={'+'.join(feature_identifiers)}",
             f"--output_directory={output_path}",
             "--protein_delimiter=+",
-            f"--data_directory={config.backend_weights_dir or ''}",
+            f"--data_directory={config.backend_weights_dir}",
             f"--features_directory={config.feature_dir}",
             "--fold_backend=alphafold2",
         ]

@@ -49,7 +49,8 @@ def native_fixture(
     benchmark_fasta = benchmark_root / "fasta"
     fasta_dir = root / "data/processed/fasta"
     deployment = root / "deployment/aws"
-    for path in [benchmark_inputs, benchmark_fasta, fasta_dir, deployment]:
+    weights_dir = root / "alphafold2-model-weights"
+    for path in [benchmark_inputs, benchmark_fasta, fasta_dir, deployment, weights_dir]:
         path.mkdir(parents=True, exist_ok=True)
 
     shutil.copy2(
@@ -91,7 +92,7 @@ def native_fixture(
                 "NATIVE_ENABLE_ALPHAJUDGE=false",
                 "MAX_TEMPLATE_DATE=2050-01-01",
                 "DATABASES_DIR=",
-                "BACKEND_WEIGHTS_DIR=",
+                f"BACKEND_WEIGHTS_DIR={weights_dir}",
                 f"FASTA_DIR={fasta_dir}",
                 f"FASTA_MANIFEST={benchmark_fasta / 'fasta_manifest.tsv'}",
                 f"ALPHAPULLDOWN_INPUT_DIR={benchmark_inputs}",
@@ -266,6 +267,29 @@ class DockerNativeRuntimeTests(unittest.TestCase):
             config = load_native_config(native_fixture(Path(tmp), stage="gpu"))
             with self.assertRaisesRegex(ValidationError, "Missing required AF2 feature"):
                 prediction_commands(config)
+
+    def test_prediction_refuses_empty_or_missing_model_weights_directory(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            env = native_fixture(root, stage="gpu")
+            create_features(load_native_config(env))
+            env.write_text(
+                env.read_text().replace("BACKEND_WEIGHTS_DIR=" + str(root / "alphafold2-model-weights"), "BACKEND_WEIGHTS_DIR=")
+            )
+            with self.assertRaisesRegex(ValidationError, "BACKEND_WEIGHTS_DIR"):
+                prediction_commands(load_native_config(env))
+
+            env = native_fixture(root, stage="gpu")
+            create_features(load_native_config(env))
+            missing = root / "missing-model-weights"
+            env.write_text(
+                env.read_text().replace(
+                    "BACKEND_WEIGHTS_DIR=" + str(root / "alphafold2-model-weights"),
+                    "BACKEND_WEIGHTS_DIR=" + str(missing),
+                )
+            )
+            with self.assertRaisesRegex(ValidationError, "does not exist"):
+                prediction_commands(load_native_config(env))
 
     def test_scientific_execution_requires_real_derived_digest(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
