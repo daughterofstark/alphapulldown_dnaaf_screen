@@ -9,9 +9,7 @@ class ValidationError(ValueError):
     """Raised when project metadata or generated artifacts fail validation."""
 
 
-ACCESSION_RE = re.compile(
-    r"^(?:[OPQ][0-9][A-Z0-9]{3}[0-9]|[A-NR-Z][0-9][A-Z][A-Z0-9]{2}[0-9])$"
-)
+ACCESSION_RE = re.compile(r"^(?:[OPQ][0-9][A-Z0-9]{3}[0-9]|[A-NR-Z][0-9][A-Z][A-Z0-9]{2}[0-9])$")
 AMINO_ACID_RE = re.compile(r"^[ACDEFGHIKLMNPQRSTVWYBXZUOJ]+$")
 
 

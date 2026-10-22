@@ -16,7 +16,6 @@ import urllib.request
 from pathlib import Path
 from typing import Any
 
-
 UNIPROT_SEARCH_URL = "https://rest.uniprot.org/uniprotkb/search"
 UNIPROT_ENTRY_URL = "https://rest.uniprot.org/uniprotkb/{accession}.json"
 UNIPROT_RELEASE_URL = "https://rest.uniprot.org/uniprotkb/search?query=*&size=0&format=json"

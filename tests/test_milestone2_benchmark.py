@@ -108,7 +108,9 @@ class Milestone2BenchmarkTests(unittest.TestCase):
         for row in self.scenarios():
             for record_id in row["target_record_ids"]:
                 fasta = FASTA_DIR / f"{record_id}.fasta"
-                self.assertTrue(fasta.exists(), f"Missing existing internal FASTA record {record_id}")
+                self.assertTrue(
+                    fasta.exists(), f"Missing existing internal FASTA record {record_id}"
+                )
 
     def test_source_panel_record_ids_are_existing_internal_records(self) -> None:
         girish_ids = {row["set_id"] for row in json.loads(GIRISH_PANEL.read_text(encoding="utf-8"))}
@@ -122,9 +124,7 @@ class Milestone2BenchmarkTests(unittest.TestCase):
 
     def test_chlamydomonas_scenario_has_no_target_fallback(self) -> None:
         row = next(
-            row
-            for row in self.scenarios()
-            if row["scenario_id"] == "chlamy_dnaaf18_ift46_positive"
+            row for row in self.scenarios() if row["scenario_id"] == "chlamy_dnaaf18_ift46_positive"
         )
         self.assertEqual(row["target_record_ids"], [])
         self.assertEqual(
@@ -276,9 +276,7 @@ class Milestone2BenchmarkTests(unittest.TestCase):
             input_dir = copy_benchmark_inputs(Path(tmp))
             with (input_dir / "milestone2_sample_sheet.tsv").open("a", encoding="utf-8") as handle:
                 handle.write("chlamy_dnaaf18_ift46_positive\t\t\n")
-            with self.assertRaisesRegex(
-                ValidationError, "versioned sequence records are absent"
-            ):
+            with self.assertRaisesRegex(ValidationError, "versioned sequence records are absent"):
                 accessions_for_screen("milestone2", input_dir)
 
     def test_excluded_milestone2_scenario_is_rejected_if_requested(self) -> None:

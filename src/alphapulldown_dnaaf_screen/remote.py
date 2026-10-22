@@ -10,9 +10,9 @@ import os
 import platform
 import re
 import subprocess
+from collections.abc import Callable
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Callable
 
 from .provenance import git_metadata, sha256_file
 from .validation import ValidationError, require, validate_accession
@@ -133,7 +133,7 @@ class RemoteConfig:
     snakemake_jobs: str = "50"
 
     @classmethod
-    def from_env(cls, values: dict[str, str]) -> "RemoteConfig":
+    def from_env(cls, values: dict[str, str]) -> RemoteConfig:
         def required_path(key: str) -> Path:
             require(bool(values.get(key)), f"Missing required remote config key: {key}")
             return Path(values[key])
@@ -299,7 +299,10 @@ def read_milestone2_sample_sheet(input_dir: Path) -> list[dict[str, str]]:
     seen: list[str] = []
     for row in rows:
         scenario_id = row["scenario_id"]
-        require(scenario_id not in excluded, f"Milestone 2 scenario is explicitly excluded: {scenario_id}")
+        require(
+            scenario_id not in excluded,
+            f"Milestone 2 scenario is explicitly excluded: {scenario_id}",
+        )
         require(scenario_id in scenarios, f"Unknown Milestone 2 scenario ID: {scenario_id}")
         scenario = scenarios[scenario_id]
         status = scenario.get("execution_status")
@@ -370,10 +373,9 @@ def validate_accession_files(config: RemoteConfig) -> None:
         validated_any = True
         for accession in accessions_for_screen("controls", config.alphapulldown_input_dir):
             validate_accession(accession)
-    if (
-        (config.alphapulldown_input_dir / "transport_baits.txt").exists()
-        or (config.alphapulldown_input_dir / "ift_b_preys.txt").exists()
-    ):
+    if (config.alphapulldown_input_dir / "transport_baits.txt").exists() or (
+        config.alphapulldown_input_dir / "ift_b_preys.txt"
+    ).exists():
         validated_any = True
         for accession in accessions_for_screen("transport", config.alphapulldown_input_dir):
             validate_accession(accession)
@@ -381,7 +383,10 @@ def validate_accession_files(config: RemoteConfig) -> None:
         validated_any = True
         for accession in accessions_for_screen("milestone2", config.alphapulldown_input_dir):
             validate_accession(accession)
-    require(validated_any, f"No supported AlphaPulldown input files found in {config.alphapulldown_input_dir}")
+    require(
+        validated_any,
+        f"No supported AlphaPulldown input files found in {config.alphapulldown_input_dir}",
+    )
 
 
 def expected_feature_paths(config: RemoteConfig, accessions: list[str]) -> dict[str, Path]:
@@ -567,9 +572,7 @@ def pinned_workflow_feature_plan(
     """
 
     _validate_cli_argument_map("create_feature_arguments", create_feature_arguments)
-    data_pipeline = str(
-        create_feature_arguments.get("--data_pipeline", "alphafold2")
-    ).lower()
+    data_pipeline = str(create_feature_arguments.get("--data_pipeline", "alphafold2")).lower()
     is_af3 = data_pipeline in {"alphafold3", "af3"}
     if is_af3:
         feature_output_pattern = "{fasta_basename}_af3_input.json"
@@ -751,9 +754,7 @@ def write_resolved_prediction_config(
 ) -> tuple[Path, list[Path]]:
     run_dir = config.provenance_dir / run_id
     input_files = write_prediction_input_files(config, screen=screen, output_dir=run_dir)
-    payload = _base_upstream_config(
-        config, input_files=input_files, use_precomputed_features=True
-    )
+    payload = _base_upstream_config(config, input_files=input_files, use_precomputed_features=True)
     payload["only_generate_features"] = False
     path = run_dir / f"prediction.{screen}.config.json"
     _write_json_config(path, payload)

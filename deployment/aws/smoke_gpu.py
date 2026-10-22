@@ -24,8 +24,8 @@ def verify_help_command(command: list[str], expected_flag: str) -> None:
 
 
 def main() -> int:
-    import jax
     import alphapulldown.scripts.run_structure_prediction  # noqa: F401
+    import jax
 
     if importlib.metadata.version("alphapulldown") != "2.5.0":
         raise RuntimeError("AlphaPulldown version does not match the candidate image contract")
