@@ -27,6 +27,9 @@ target-version = "py311"
 
 [tool.ruff.lint]
 select = ["E", "F", "I", "UP", "B", "SIM"]
+# The Docker-native AlphaPulldown runtime remains on Python 3.10, where
+# datetime.UTC is unavailable.
+ignore = ["UP017"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]

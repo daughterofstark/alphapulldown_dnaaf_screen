@@ -5,7 +5,6 @@ import json
 import unittest
 from pathlib import Path
 
-
 PANEL_TSV = Path("data/processed/screens/girish_refined_first_run_panel.tsv")
 PANEL_JSON = Path("data/processed/screens/girish_refined_first_run_panel.json")
 RUNPOD_TSV = Path("data/processed/alphapulldown/girish_refined_runpod_first_run.tsv")
@@ -75,9 +74,7 @@ class GirishRefinedPanelTests(unittest.TestCase):
 
     def test_dnah5_and_dnah9_are_deferred_construct_review_only(self) -> None:
         deferred = [
-            row
-            for row in load_tsv(PANEL_TSV)
-            if row["set_id"] in {"GR_SET_010", "GR_SET_011"}
+            row for row in load_tsv(PANEL_TSV) if row["set_id"] in {"GR_SET_010", "GR_SET_011"}
         ]
         self.assertEqual(len(deferred), 2)
         for row in deferred:
@@ -91,7 +88,9 @@ class GirishRefinedPanelTests(unittest.TestCase):
 
     def test_multichain_jobs_are_labelled_honestly(self) -> None:
         for row in load_tsv(RUNPOD_TSV):
-            chain_count = row["alphapulldown_spec"].count("+") + 1 if row["alphapulldown_spec"] else 0
+            chain_count = (
+                row["alphapulldown_spec"].count("+") + 1 if row["alphapulldown_spec"] else 0
+            )
             if row["job_group"] == "multichain_primary_if_supported":
                 self.assertEqual(row["requires_multichain_support"], "true", row)
                 self.assertGreaterEqual(chain_count, 3, row)

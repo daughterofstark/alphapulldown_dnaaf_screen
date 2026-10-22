@@ -11,9 +11,9 @@ import platform
 import re
 import shutil
 import subprocess
+from collections.abc import Callable, Sequence
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Callable, Sequence
 
 from .provenance import git_metadata, sha256_file
 from .remote import (
@@ -90,7 +90,7 @@ class NativeRuntimeConfig:
     backend_weights_dir: Path | None = None
 
     @classmethod
-    def from_env(cls, values: dict[str, str]) -> "NativeRuntimeConfig":
+    def from_env(cls, values: dict[str, str]) -> NativeRuntimeConfig:
         runtime = values.get("CONTAINER_RUNTIME", "")
         require(
             runtime == DOCKER_NATIVE_RUNTIME,
@@ -112,7 +112,8 @@ class NativeRuntimeConfig:
         require(
             values.get("FEATURE_FILE_PATTERN", NATIVE_MMS2_AF2_FEATURE_PATTERN)
             == NATIVE_MMS2_AF2_FEATURE_PATTERN,
-            "Docker-native Milestone 2 requires AlphaPulldown FASTA-identifier .pkl.xz feature files",
+            "Docker-native Milestone 2 requires AlphaPulldown FASTA-identifier "
+            ".pkl.xz feature files",
         )
         data_pipeline = values.get("NATIVE_DATA_PIPELINE", AF2_PIPELINE).lower()
         fold_backend = values.get("NATIVE_FOLD_BACKEND", AF2_PIPELINE).lower()
@@ -125,11 +126,7 @@ class NativeRuntimeConfig:
             "AlphaJudge analysis is not supported by the Docker-native Milestone 2 runtime",
         )
 
-        weights = (
-            Path(values["BACKEND_WEIGHTS_DIR"])
-            if values.get("BACKEND_WEIGHTS_DIR")
-            else None
-        )
+        weights = Path(values["BACKEND_WEIGHTS_DIR"]) if values.get("BACKEND_WEIGHTS_DIR") else None
         if weights is not None:
             require(weights.is_absolute(), "BACKEND_WEIGHTS_DIR must be absolute when set")
 
@@ -154,12 +151,8 @@ class NativeRuntimeConfig:
             derived_image_digest=values.get(
                 "ALPHAPULLDOWN_DERIVED_IMAGE_DIGEST", UNBUILT_IMAGE_DIGEST
             ),
-            expected_alphapulldown_version=values.get(
-                "ALPHAPULLDOWN_EXPECTED_VERSION", "2.5.0"
-            ),
-            expected_alphapulldown_revision=values.get(
-                "ALPHAPULLDOWN_EXPECTED_REVISION", ""
-            ),
+            expected_alphapulldown_version=values.get("ALPHAPULLDOWN_EXPECTED_VERSION", "2.5.0"),
+            expected_alphapulldown_revision=values.get("ALPHAPULLDOWN_EXPECTED_REVISION", ""),
             max_template_date=values.get("MAX_TEMPLATE_DATE", "2050-01-01"),
             backend_weights_dir=weights,
         )
@@ -192,8 +185,7 @@ def validate_milestone2_isolation(config: NativeRuntimeConfig) -> None:
         "Docker-native Milestone 2 must use benchmark-only AlphaPulldown inputs",
     )
     require(
-        _resolved(config.input_dir.parent / "milestone2_scenarios.json")
-        == expected_scenarios,
+        _resolved(config.input_dir.parent / "milestone2_scenarios.json") == expected_scenarios,
         "Docker-native Milestone 2 must read only milestone2_scenarios.json",
     )
 
@@ -251,10 +243,7 @@ def _manifest_rows(config: NativeRuntimeConfig) -> dict[str, dict[str, str]]:
     rows = read_fasta_manifest(config.fasta_manifest)
     sample_rows = read_milestone2_sample_sheet(config.input_dir)
     required_ids = {
-        record_id
-        for row in sample_rows
-        for record_id in row["record_ids"].split("+")
-        if record_id
+        record_id for row in sample_rows for record_id in row["record_ids"].split("+") if record_id
     }
     require(
         set(rows) == required_ids,
@@ -274,9 +263,7 @@ def _fasta_paths(config: NativeRuntimeConfig) -> dict[str, Path]:
     return paths
 
 
-def _feature_path(
-    config: NativeRuntimeConfig, *, record_id: str, fasta_path: Path
-) -> Path:
+def _feature_path(config: NativeRuntimeConfig, *, record_id: str, fasta_path: Path) -> Path:
     """Return the exact AlphaPulldown AF2 feature path for one benchmark FASTA."""
 
     identifier = _alphapulldown_fasta_identifier(fasta_path)
@@ -317,9 +304,7 @@ def feature_commands(config: NativeRuntimeConfig) -> list[list[str]]:
             "--skip_existing=True",
         ]
         _validate_native_command(command)
-        expected = _feature_path(
-            config, record_id=record_id, fasta_path=fasta_path
-        )
+        expected = _feature_path(config, record_id=record_id, fasta_path=fasta_path)
         require(
             expected.suffixes[-2:] == [".pkl", ".xz"],
             f"Unexpected feature target for {record_id}: {expected}",
@@ -368,8 +353,7 @@ def prediction_commands(
             )
             require(feature_path.is_file(), f"Missing required AF2 feature file: {feature_path}")
         feature_identifiers = [
-            _alphapulldown_fasta_identifier(fasta_paths[record_id])
-            for record_id in record_ids
+            _alphapulldown_fasta_identifier(fasta_paths[record_id]) for record_id in record_ids
         ]
         output_path = config.output_dir / "predictions" / selected_scenario_id
         command = [
@@ -527,9 +511,7 @@ def _plan_input_paths(config: NativeRuntimeConfig, *, command: str) -> list[Path
         paths.extend(_fasta_paths(config).values())
     else:
         for record_id, fasta_path in sorted(_fasta_paths(config).items()):
-            paths.append(
-                _feature_path(config, record_id=record_id, fasta_path=fasta_path)
-            )
+            paths.append(_feature_path(config, record_id=record_id, fasta_path=fasta_path))
     return paths
 
 
@@ -561,9 +543,7 @@ def write_native_provenance(
         "runtime": identity,
         "commands": commands,
         "command_strings": [shell_join(command) for command in commands],
-        "inputs": [
-            {"path": str(path), "sha256": sha256_file(path)} for path in input_paths
-        ],
+        "inputs": [{"path": str(path), "sha256": sha256_file(path)} for path in input_paths],
         "paths": {
             "fasta_manifest": str(config.fasta_manifest),
             "input_dir": str(config.input_dir),

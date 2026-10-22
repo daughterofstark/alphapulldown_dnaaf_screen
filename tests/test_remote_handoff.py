@@ -16,12 +16,12 @@ from alphapulldown_dnaaf_screen.remote import (
     load_remote_config,
     missing_features,
     parse_env_file,
-    prediction_command,
     pinned_workflow_feature_plan,
+    prediction_command,
     render_pinned_create_features_command,
     require_linux,
-    stable_run_id,
     snakemake_base_command,
+    stable_run_id,
     upstream_cli_parameters,
     validate_configured_sif,
     validate_feature_execution_model,
@@ -218,7 +218,9 @@ class RemoteHandoffTests(unittest.TestCase):
             self.assertIs(payload["create_feature_arguments"]["--skip_existing"], True)
             self.assertNotIn("alphafold3", json.dumps(payload).lower())
             self.assertNotIn("_af3_input.json", json.dumps(payload))
-            self.assertEqual(payload["prediction_container"], "docker://kosinskilab/alphafold2:2.5.0")
+            self.assertEqual(
+                payload["prediction_container"], "docker://kosinskilab/alphafold2:2.5.0"
+            )
 
     def test_configured_sif_path_is_emitted_into_feature_config(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
@@ -416,7 +418,7 @@ class RemoteHandoffTests(unittest.TestCase):
     def test_bootstrap_stage_controls_nvidia_requirement(self) -> None:
         text = Path("scripts/remote/bootstrap_remote_environment.sh").read_text(encoding="utf-8")
         self.assertIn('REMOTE_EXECUTION_STAGE="${REMOTE_EXECUTION_STAGE:-gpu}"', text)
-        self.assertIn('REMOTE_EXECUTION_STAGE=cpu: NVIDIA GPU/nvidia-smi is not required.', text)
+        self.assertIn("REMOTE_EXECUTION_STAGE=cpu: NVIDIA GPU/nvidia-smi is not required.", text)
         self.assertIn("nvidia-smi is required for REMOTE_EXECUTION_STAGE=gpu", text)
         self.assertIn("GPU: not detected; allowed for REMOTE_EXECUTION_STAGE=cpu", text)
 
@@ -503,7 +505,7 @@ class RemoteHandoffTests(unittest.TestCase):
             )
             self.assertTrue(
                 shell_command.endswith(
-                "--data_pipeline=alphafold2 --use_mmseqs2=True --skip_existing=True",
+                    "--data_pipeline=alphafold2 --use_mmseqs2=True --skip_existing=True",
                 )
             )
             self.assertNotIn("\n--use_mmseqs2=True", shell_command)
@@ -518,20 +520,22 @@ class RemoteHandoffTests(unittest.TestCase):
             config = load_remote_config(env)
             validate_feature_execution_model(config)
 
-            with mock.patch(
-                "alphapulldown_dnaaf_screen.remote._base_upstream_config",
-                return_value={
-                    "create_feature_arguments": {
-                        "--compress_features": True,
-                        "--data_pipeline": "alphafold3",
-                        "--use_mmseqs2": True,
-                        "--skip_existing": True,
+            with (
+                mock.patch(
+                    "alphapulldown_dnaaf_screen.remote._base_upstream_config",
+                    return_value={
+                        "create_feature_arguments": {
+                            "--compress_features": True,
+                            "--data_pipeline": "alphafold3",
+                            "--use_mmseqs2": True,
+                            "--skip_existing": True,
+                        },
+                        "structure_inference_arguments": {"--fold_backend": "alphafold3"},
                     },
-                    "structure_inference_arguments": {"--fold_backend": "alphafold3"},
-                },
+                ),
+                self.assertRaisesRegex(ValidationError, "alphafold2"),
             ):
-                with self.assertRaisesRegex(ValidationError, "alphafold2"):
-                    validate_feature_execution_model(config)
+                validate_feature_execution_model(config)
 
     def test_feature_argument_newlines_are_rejected_before_snakemake(self) -> None:
         with self.assertRaises(ValidationError):
@@ -574,7 +578,7 @@ class RemoteHandoffTests(unittest.TestCase):
         text = Path("scripts/remote/rebuild_runpod_runtime.sh").read_text(encoding="utf-8")
         self.assertIn("--dry-run", text)
         self.assertIn("DRY RUN:", text)
-        self.assertIn("WORKSPACE_ROOT=\"${WORKSPACE_ROOT:-/workspace}\"", text)
+        self.assertIn('WORKSPACE_ROOT="${WORKSPACE_ROOT:-/workspace}"', text)
         self.assertIn("/workspace|/workspace/*", text)
         self.assertIn("RUNPOD_LOG_DIR", text)
 
@@ -589,7 +593,7 @@ class RemoteHandoffTests(unittest.TestCase):
         self.assertIn("Apptainer is required", bootstrap)
         self.assertIn("require_executable_apptainer_sif", bootstrap)
         self.assertIn("command -v apptainer", validator)
-        self.assertIn("fail \"Apptainer\"", validator)
+        self.assertIn('fail "Apptainer"', validator)
         self.assertIn('apptainer exec "${APPTAINER_PREDICTION_SIF}" true', validator)
 
     def test_historical_execution_preflight_has_safe_host_remediation(self) -> None:
@@ -661,9 +665,7 @@ class RemoteHandoffTests(unittest.TestCase):
         self.assertEqual(values["APPTAINER_PREDICTION_SIF"], "")
 
     def test_runpod_checklist_requires_tmux_and_native_stage_split(self) -> None:
-        text = Path("docs/archive/runpod/RUNPOD_EXECUTION_CHECKLIST.md").read_text(
-            encoding="utf-8"
-        )
+        text = Path("docs/archive/runpod/RUNPOD_EXECUTION_CHECKLIST.md").read_text(encoding="utf-8")
         self.assertIn("tmux new -s alphapulldown-features", text)
         self.assertIn("tmux new -s alphapulldown-predict", text)
         self.assertIn("run_native_stage.sh", text)
@@ -678,9 +680,7 @@ class RemoteHandoffTests(unittest.TestCase):
         self.assertIn("features/*.pkl.xz", text)
 
     def test_runpod_checklist_retires_apptainer_for_runpod(self) -> None:
-        text = Path("docs/archive/runpod/RUNPOD_EXECUTION_CHECKLIST.md").read_text(
-            encoding="utf-8"
-        )
+        text = Path("docs/archive/runpod/RUNPOD_EXECUTION_CHECKLIST.md").read_text(encoding="utf-8")
         self.assertIn('CONTAINER_RUNTIME="docker-native"', text)
         self.assertIn('REMOTE_EXECUTION_STAGE="cpu"', text)
         self.assertIn('REMOTE_EXECUTION_STAGE="gpu"', text)
@@ -696,6 +696,7 @@ def top_level_keys(path: Path) -> set[str]:
         if ":" in raw_line:
             keys.add(raw_line.split(":", 1)[0])
     return keys
+
 
 def successful_inspect(command: list[str]) -> subprocess.CompletedProcess[str]:
     return subprocess.CompletedProcess(command, 0, stdout="ok", stderr="")

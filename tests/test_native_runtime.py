@@ -58,8 +58,7 @@ def native_fixture(
         benchmark_root / "milestone2_scenarios.json",
     )
     shutil.copy2(
-        source_root
-        / "data/processed/benchmarks/alphapulldown_inputs/milestone2_sample_sheet.tsv",
+        source_root / "data/processed/benchmarks/alphapulldown_inputs/milestone2_sample_sheet.tsv",
         benchmark_inputs / "milestone2_sample_sheet.tsv",
     )
     shutil.copy2(
@@ -185,8 +184,7 @@ class DockerNativeRuntimeTests(unittest.TestCase):
             root = Path(tmp)
             env = native_fixture(root)
             sample = (
-                root
-                / "data/processed/benchmarks/alphapulldown_inputs/milestone2_sample_sheet.tsv"
+                root / "data/processed/benchmarks/alphapulldown_inputs/milestone2_sample_sheet.tsv"
             )
             with sample.open("a", encoding="utf-8") as handle:
                 handle.write("chlamy_dnaaf18_ift46_positive\t\t\n")
@@ -244,29 +242,21 @@ class DockerNativeRuntimeTests(unittest.TestCase):
         with tempfile.TemporaryDirectory() as tmp:
             config = load_native_config(native_fixture(Path(tmp), stage="gpu"))
             create_features(config)
-            commands = prediction_commands(
-                config, scenario_id="human_dnaaf18_ift46_negative"
-            )
+            commands = prediction_commands(config, scenario_id="human_dnaaf18_ift46_negative")
             self.assertEqual(len(commands), 1)
             self.assertIn(
                 "human_dnaaf18_ift46_negative",
                 " ".join(commands[0]),
             )
             with self.assertRaisesRegex(ValidationError, "blocked"):
-                prediction_commands(
-                    config, scenario_id="chlamy_dnaaf18_ift46_positive"
-                )
+                prediction_commands(config, scenario_id="chlamy_dnaaf18_ift46_positive")
 
     def test_prediction_uses_real_alphapulldown_fasta_identifier_feature_names(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
             config = load_native_config(native_fixture(Path(tmp), stage="gpu"))
             create_features(config)
             prediction_commands(config)
-            self.assertTrue(
-                (
-                    config.feature_dir / "HUMAN_IFT80_Q9P2H3_IFT80.pkl.xz"
-                ).is_file()
-            )
+            self.assertTrue((config.feature_dir / "HUMAN_IFT80_Q9P2H3_IFT80.pkl.xz").is_file())
             self.assertFalse((config.feature_dir / "HUMAN_IFT80.pkl.xz").exists())
 
     def test_prediction_uses_feature_identifiers_not_internal_record_ids(self) -> None:
@@ -291,9 +281,8 @@ class DockerNativeRuntimeTests(unittest.TestCase):
             root = Path(tmp)
             env = native_fixture(root, stage="gpu")
             create_features(load_native_config(env))
-            env.write_text(
-                env.read_text().replace("BACKEND_WEIGHTS_DIR=" + str(root / "alphafold2-model-weights"), "BACKEND_WEIGHTS_DIR=")
-            )
+            configured_weights = "BACKEND_WEIGHTS_DIR=" + str(root / "alphafold2-model-weights")
+            env.write_text(env.read_text().replace(configured_weights, "BACKEND_WEIGHTS_DIR="))
             with self.assertRaisesRegex(ValidationError, "BACKEND_WEIGHTS_DIR"):
                 prediction_commands(load_native_config(env))
 
@@ -312,34 +301,38 @@ class DockerNativeRuntimeTests(unittest.TestCase):
     def test_scientific_execution_requires_real_derived_digest(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
             config = load_native_config(native_fixture(Path(tmp), stage="cpu"))
-            with mock.patch(
-                "alphapulldown_dnaaf_screen.native_runtime.platform.system",
-                return_value="Linux",
+            with (
+                mock.patch(
+                    "alphapulldown_dnaaf_screen.native_runtime.platform.system",
+                    return_value="Linux",
+                ),
+                self.assertRaisesRegex(ValidationError, "real derived image digest"),
             ):
-                with self.assertRaisesRegex(ValidationError, "real derived image digest"):
-                    validate_host_runtime(
-                        config,
-                        command="features",
-                        dry_run=False,
-                        which=lambda name: f"/usr/bin/{name}",
-                    )
+                validate_host_runtime(
+                    config,
+                    command="features",
+                    dry_run=False,
+                    which=lambda name: f"/usr/bin/{name}",
+                )
 
     def test_scientific_execution_requires_promoted_lock_and_revision(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
             config = load_native_config(
                 native_fixture(Path(tmp), stage="cpu", derived_digest="sha256:derived")
             )
-            with mock.patch(
-                "alphapulldown_dnaaf_screen.native_runtime.platform.system",
-                return_value="Linux",
+            with (
+                mock.patch(
+                    "alphapulldown_dnaaf_screen.native_runtime.platform.system",
+                    return_value="Linux",
+                ),
+                self.assertRaisesRegex(ValidationError, "image-lock.json"),
             ):
-                with self.assertRaisesRegex(ValidationError, "image-lock.json"):
-                    validate_host_runtime(
-                        config,
-                        command="features",
-                        dry_run=False,
-                        which=lambda name: f"/usr/bin/{name}",
-                    )
+                validate_host_runtime(
+                    config,
+                    command="features",
+                    dry_run=False,
+                    which=lambda name: f"/usr/bin/{name}",
+                )
 
     def test_gpu_preflight_requires_nvidia_and_checks_it(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
@@ -483,12 +476,8 @@ class DockerNativeRuntimeTests(unittest.TestCase):
 
     def test_aws_stage_wrapper_uses_validated_image_and_benchmark_mount(self) -> None:
         wrapper = Path("scripts/aws/run_milestone2_stage.sh").read_text(encoding="utf-8")
-        configure = Path("scripts/aws/configure_milestone2_runtime.sh").read_text(
-            encoding="utf-8"
-        )
-        template = Path("config/benchmarks/milestone2_aws.example.env").read_text(
-            encoding="utf-8"
-        )
+        configure = Path("scripts/aws/configure_milestone2_runtime.sh").read_text(encoding="utf-8")
+        template = Path("config/benchmarks/milestone2_aws.example.env").read_text(encoding="utf-8")
         self.assertIn("docker image inspect", wrapper)
         self.assertIn("ALPHAPULLDOWN_DERIVED_IMAGE_DIGEST", wrapper)
         self.assertIn("--volume", wrapper)

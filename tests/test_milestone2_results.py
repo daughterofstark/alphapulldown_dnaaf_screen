@@ -60,6 +60,8 @@ class Milestone2ResultsTests(unittest.TestCase):
         self.assertAlmostEqual(summary.low_pae_interchain_fraction, 0.5)
 
     def test_rejects_incomplete_prediction(self) -> None:
-        with tempfile.TemporaryDirectory() as temporary_directory:
-            with self.assertRaisesRegex(ResultValidationError, "ranking_debug"):
-                summarize_prediction("synthetic", Path(temporary_directory))
+        with (
+            tempfile.TemporaryDirectory() as temporary_directory,
+            self.assertRaisesRegex(ResultValidationError, "ranking_debug"),
+        ):
+            summarize_prediction("synthetic", Path(temporary_directory))
