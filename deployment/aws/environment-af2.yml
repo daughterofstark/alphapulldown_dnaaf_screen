@@ -1,0 +1,15 @@
+name: alphapulldown-af2
+channels:
+  - conda-forge
+  - bioconda
+channel_priority: strict
+dependencies:
+  - python=3.10
+  - pip
+  - kalign2
+  - hmmer
+  - hhsuite
+  - modelcif=1.6
+  - openmm>=8.2
+  - pdbfixer=1.12
+  - numpy=1.26.4

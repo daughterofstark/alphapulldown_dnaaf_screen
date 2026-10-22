@@ -1,12 +1,12 @@
 cff-version: 1.2.0
-message: "If you use this project, please cite it using the metadata below. Placeholder metadata must be updated before public release."
+message: "If you use this project, please cite it using the metadata below. Update author and release metadata before a formal release."
 title: "AlphaPulldown DNAAF-ODA-IFT Screen"
-version: "0.0.0"
-date-released: 2026-07-02
+version: "0.1.0"
+date-released: 2026-10-22
 authors:
   - family-names: "Sharma"
     given-names: "Medha"
-repository-code: "https://github.com/PLACEHOLDER/alphapulldown-dnaaf-oda-ift-screen"
+repository-code: "https://github.com/daughterofstark/alphapulldown_dnaaf_screen"
 license: "NOASSERTION"
 keywords:
   - AlphaPulldown

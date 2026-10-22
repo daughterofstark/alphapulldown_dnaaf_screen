@@ -1,0 +1,66 @@
+# AlphaPulldownSnakemake 2.5.0 feature-only configuration template.
+#
+# The remote wrapper materializes a resolved copy under results/provenance/<run_id>/
+# with machine-specific paths from config/remote/paths.env. Top-level keys below are
+# upstream AlphaPulldownSnakemake config keys. Project-local notes live only under
+# project_local and must not be passed as Snakemake settings.
+
+input_files:
+  - "${RESOLVED_FEATURE_INPUTS_TXT}"
+protein_delimiter: "+"
+exclude_permutations: true
+output_directory: "${OUTPUT_DIR}"
+databases_directory: "${DATABASES_DIR}"
+backend_weights_directory: "${BACKEND_WEIGHTS_DIR}"
+feature_directory: []
+only_generate_features: true
+enable_structure_analysis: true
+generate_recursive_report: true
+recursive_report_arguments: {}
+
+create_feature_arguments:
+  --save_msa_files: false
+  --use_precomputed_msas: true
+  --max_template_date: "2050-01-01"
+  --compress_features: true
+  --data_pipeline: "alphafold3"
+  # For remote MMseqs2 mode in AlphaPulldown 2.5.0, the wrapper switches
+  # --data_pipeline to "alphafold2" because create_individual_features.py rejects
+  # --use_mmseqs2 with the AlphaFold3 data pipeline. It then adds:
+  # --use_mmseqs2: true
+  # --skip_existing: true
+
+structure_inference_arguments:
+  --fold_backend: "alphafold3"
+
+analyze_structure_arguments:
+  --contact_thresh: 8.0
+  --pae_filter: 100.0
+  --models_to_analyse: "all"
+
+mem_safety_factor: 1.25
+max_mem_mb: 0
+feature_create_ram_scaling: 1.1
+structure_inference_ram_scaling: 1.1
+max_total_length_alphafold2: 5000
+max_total_length_alphafold3: 7000
+max_protein_length: 0
+length_filter_fetch_uniprot: false
+alphafold_inference_threads: 8
+
+slurm_partition: ""
+slurm_qos: ""
+structure_inference_gpus_per_task: 1
+structure_inference_gpu_model: ""
+structure_inference_max_runtime: 10080
+structure_inference_unified_memory: true
+structure_inference_xla_mem_fraction: "auto"
+
+prediction_container: "docker://kosinskilab/alphafold3:2.5.0"
+analysis_container: "docker://kosinskilab/alphajudge:latest"
+
+project_local:
+  pinned_workflow: "KosinskiLab/AlphaPulldownSnakemake:2.5.0"
+  stage: "feature_generation"
+  mode_env_key: "FEATURE_MODE"
+  resolved_by: "alphapulldown_dnaaf_screen.remote_cli"

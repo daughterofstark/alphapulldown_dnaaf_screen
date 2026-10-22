@@ -1,0 +1,50 @@
+# Example AlphaPulldown/AlphaPulldownSnakemake configuration for a future Linux GPU host.
+# Copy this file to a machine-specific config file and fill in paths there.
+
+project:
+  name: alphapulldown-dnaaf-oda-ift-screen
+  mode: cpu_prepared_gpu_executed
+
+paths:
+  databases_directory: "<ABSOLUTE_PATH_TO_ALPHAFOLD_DATABASES>"
+  features_directory: "<ABSOLUTE_PATH_TO_FEATURE_OUTPUT>"
+  output_directory: "<ABSOLUTE_PATH_TO_PREDICTION_OUTPUT>"
+  input_files:
+    - data/processed/alphapulldown/control_sample_sheet.csv
+
+backend:
+  engine: alphapulldown
+  alphafold_backend: alphafold_multimer
+  model_preset: multimer
+  use_templates: true
+  msa_strategy: official_alphapulldown_default
+
+prediction:
+  num_predictions_per_model: 1
+  num_recycles: 3
+  random_seed: null
+  stop_at_score: null
+
+analysis:
+  run_structure_analysis: true
+  generate_recursive_report: true
+  export_pae_plots: true
+  export_interface_tables: true
+
+gpu:
+  required: true
+  platform: linux_nvidia_cuda
+  cuda_version: "<TO_BE_RECORDED_ON_GPU_HOST>"
+  jax_version: "<TO_BE_RECORDED_ON_GPU_HOST>"
+  notes: "Do not run AlphaFold/AlphaPulldown inference on local macOS without NVIDIA CUDA."
+
+slurm:
+  enabled: false
+  partition: "<CLUSTER_PARTITION>"
+  account: "<CLUSTER_ACCOUNT>"
+  jobs: 50
+  restart_times: 3
+  time: "24:00:00"
+  gres: "gpu:1"
+  mem: "64G"
+

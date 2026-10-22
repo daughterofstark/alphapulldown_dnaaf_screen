@@ -1,0 +1,6 @@
+pair_id	screen	bait_id	bait_accession	bait_name	prey_id	prey_accession	prey_name	prey_group	control_type	executable	requires_construct_review	alphapulldown_spec	rationale
+HUMAN_DNAAF18__HUMAN_IFT46	control_benchmark	HUMAN_DNAAF18	Q8N136	DNAAF18	HUMAN_IFT46	Q9NQC8	IFT46	IFT_B	human_nonconserved_candidate	True	False	Q8N136+Q9NQC8	Human benchmark candidate; algal ODA16-IFT46 biology should not be assumed conserved.
+HUMAN_DNAAF2__HUMAN_DNAAF4	control_benchmark	HUMAN_DNAAF2	Q9NVR5	DNAAF2	HUMAN_DNAAF4	Q8WXU2	DNAAF4	DNAAF	positive	True	False	Q9NVR5+Q8WXU2	R2TP-like dynein assembly factor interaction.
+HUMAN_DNAAF9__HUMAN_IFT74	control_benchmark	HUMAN_DNAAF9	Q5TEA3	DNAAF9	HUMAN_IFT74	Q96LB3	IFT74	IFT_B	positive	True	False	Q5TEA3+Q96LB3	Known DNAAF9/Shulin interaction with IFT-B transport machinery.
+HUMAN_DNAAF9__HUMAN_IFT81	control_benchmark	HUMAN_DNAAF9	Q5TEA3	DNAAF9	HUMAN_IFT81	Q8WYA0	IFT81	IFT_B	positive	True	False	Q5TEA3+Q8WYA0	Known DNAAF9/Shulin interaction with IFT-B transport machinery.
+HUMAN_DNAI1__HUMAN_DNAI2	control_benchmark	HUMAN_DNAI1	Q9UI46	DNAI1	HUMAN_DNAI2	Q9GZS0	DNAI2	ODA	positive	True	False	Q9UI46+Q9GZS0	ODA intermediate-chain dimer benchmark.

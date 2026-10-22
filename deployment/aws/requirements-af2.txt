@@ -1,0 +1,6 @@
+# The AlphaPulldown wheel is downloaded separately and SHA-256 verified in the
+# Dockerfile. These pins are the documented AlphaFold2 runtime constraints.
+jax[cuda12]==0.5.3
+numpy==1.26.4
+tensorflow-cpu==2.20.0
+setuptools<82

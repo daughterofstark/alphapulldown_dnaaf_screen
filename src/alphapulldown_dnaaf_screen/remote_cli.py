@@ -1,0 +1,156 @@
+"""CLI helpers used by remote shell scripts."""
+
+from __future__ import annotations
+
+import argparse
+import json
+import sys
+from dataclasses import replace
+from pathlib import Path
+
+from .remote import (
+    create_run_provenance,
+    feature_generation_command,
+    load_remote_config,
+    missing_features,
+    prediction_command,
+    shell_join,
+    stable_run_id,
+    validate_accession_files,
+    validate_configured_sif,
+    validate_feature_execution_model,
+    write_resolved_feature_config,
+    write_resolved_prediction_config,
+)
+from .validation import ValidationError
+
+
+def build_parser() -> argparse.ArgumentParser:
+    parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument("--config", type=Path, required=True, help="Remote paths.env file.")
+    subparsers = parser.add_subparsers(dest="command", required=True)
+
+    feature = subparsers.add_parser("feature-command")
+    feature.add_argument("--dry-run", action="store_true")
+
+    subparsers.add_parser("validate-feature-model")
+
+    prediction = subparsers.add_parser("prediction-command")
+    prediction.add_argument(
+        "--screen", choices=["controls", "transport", "full", "milestone2"], required=True
+    )
+    prediction.add_argument("--executor", choices=["desktop", "slurm"], default="desktop")
+    prediction.add_argument("--dry-run", action="store_true")
+
+    coverage = subparsers.add_parser("check-feature-coverage")
+    coverage.add_argument(
+        "--screen", choices=["controls", "transport", "full", "milestone2"], required=True
+    )
+    coverage.add_argument("--json", action="store_true")
+    return parser
+
+
+def feature_command(args: argparse.Namespace) -> int:
+    config = load_remote_config(args.config)
+    validate_accession_files(config)
+    validate_configured_sif(config)
+    validate_feature_execution_model(config)
+    run_id = stable_run_id("feature")
+    resolved_config, feature_inputs = write_resolved_feature_config(config, run_id=run_id)
+    config = replace(config, feature_config=resolved_config)
+    command = feature_generation_command(config, dry_run=args.dry_run)
+    provenance_inputs = [config.fasta_manifest, feature_inputs, config.feature_config]
+    if config.apptainer_prediction_sif is not None:
+        provenance_inputs.append(config.apptainer_prediction_sif)
+    create_run_provenance(
+        config=config,
+        run_id=run_id,
+        command=command,
+        input_paths=provenance_inputs,
+    )
+    print(shell_join(command))
+    return 0
+
+
+def validate_feature_model(args: argparse.Namespace) -> int:
+    config = load_remote_config(args.config)
+    validate_feature_execution_model(config)
+    print(
+        "Feature execution model valid: "
+        f"mode={config.feature_mode}, pattern={config.feature_pattern}"
+    )
+    return 0
+
+
+def prediction_command_action(args: argparse.Namespace) -> int:
+    config = load_remote_config(args.config)
+    validate_configured_sif(config)
+    missing = missing_features(config, args.screen)
+    if missing:
+        missing_preview = "\n".join(str(path) for path in missing[:20])
+        raise ValidationError(
+            f"Missing {len(missing)} required feature files for screen {args.screen}:\n"
+            f"{missing_preview}"
+        )
+    run_id = stable_run_id("prediction", screen=args.screen)
+    resolved_config, input_files = write_resolved_prediction_config(
+        config, screen=args.screen, run_id=run_id
+    )
+    config = replace(config, prediction_config=resolved_config)
+    command = prediction_command(
+        config,
+        screen=args.screen,
+        dry_run=args.dry_run,
+        executor=args.executor,
+    )
+    provenance_inputs = [config.prediction_config, config.fasta_manifest, *input_files]
+    if config.apptainer_prediction_sif is not None:
+        provenance_inputs.append(config.apptainer_prediction_sif)
+    create_run_provenance(
+        config=config,
+        run_id=run_id,
+        command=command,
+        input_paths=provenance_inputs,
+    )
+    print(shell_join(command))
+    return 0
+
+
+def check_feature_coverage(args: argparse.Namespace) -> int:
+    config = load_remote_config(args.config)
+    missing = missing_features(config, args.screen)
+    payload = {
+        "screen": args.screen,
+        "missing_count": len(missing),
+        "missing": [str(path) for path in missing],
+    }
+    if args.json:
+        print(json.dumps(payload, indent=2, sort_keys=True))
+    else:
+        print(f"screen={args.screen}")
+        print(f"missing_count={len(missing)}")
+        for path in missing:
+            print(path)
+    return 1 if missing else 0
+
+
+COMMANDS = {
+    "feature-command": feature_command,
+    "validate-feature-model": validate_feature_model,
+    "prediction-command": prediction_command_action,
+    "check-feature-coverage": check_feature_coverage,
+}
+
+
+def main(argv: list[str] | None = None) -> int:
+    parser = build_parser()
+    args = parser.parse_args(argv)
+    try:
+        return COMMANDS[args.command](args)
+    except ValidationError as exc:
+        print(f"validation error: {exc}", file=sys.stderr)
+        return 2
+
+
+if __name__ == "__main__":
+    raise SystemExit(main())

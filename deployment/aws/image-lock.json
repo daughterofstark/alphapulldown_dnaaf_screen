@@ -1,0 +1,21 @@
+{
+  "architecture": "linux/amd64",
+  "base_image": "nvidia/cuda:12.2.2-cudnn8-runtime-ubuntu20.04",
+  "base_image_digest": "sha256:1da6cf17f9c651323905c8cf5fd63a781a9a2fc0d28a477ca21df80a7bfaa00c",
+  "derived_image_digest": "sha256:458537ff9ac8363406f0ce545c74d5a954595de651f1a0dc770577ec49e70759",
+  "derived_image_identity_kind": "docker-local-image-id",
+  "derived_image_reference": "alphapulldown-af2:candidate",
+  "validated_on": "2026-08-29",
+  "validation_host": "AWS EC2 g5.xlarge (NVIDIA A10G, 23028 MiB)",
+  "validation_checks": [
+    "CPU smoke test: AlphaPulldown 2.5.0 and feature CLI",
+    "GPU smoke test: JAX 0.5.3 CudaDevice(id=0) and prediction CLI"
+  ],
+  "alphapulldown_wheel": "alphapulldown-2.5.0-py3-none-any.whl",
+  "alphapulldown_wheel_sha256": "67a8496560fddf9c9570015bf88545e48502fad7cc12f995dc69a5999a0ad75a",
+  "expected_alphapulldown_version": "2.5.0",
+  "expected_alphapulldown_revision": "1c99b15ce3fef42374c24a5bd83ce8241117d5f6",
+  "expected_jax_version": "0.5.3",
+  "upstream_snakemake_commit": "23cbba5f151f843d800b5cffaa7a3a3908c35d9e",
+  "upstream_snakemake_tag": "2.5.0"
+}

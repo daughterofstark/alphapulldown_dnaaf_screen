@@ -40,16 +40,47 @@ temp/
 .env
 .env.*
 !.env.example
+config/remote/paths.env
 
 # Large scientific outputs
 results/**
 !results/.gitkeep
+
+# Local copies of remote scientific outputs and transfer archives. These may be
+# large and are verified separately before being summarized in tracked reports.
+data/external/
+milestone2_completed_outputs_*.tar.gz
+milestone2_completed_outputs_*/
+handover/
+.codex-handover-build/
+.chart-data-*/
 data/processed/**
 !data/processed/.gitkeep
 !data/processed/uniprot/
 !data/processed/uniprot/*.tsv
 !data/processed/uniprot/*.md
 !data/processed/uniprot/*metadata.json
+!data/processed/fasta/
+!data/processed/fasta/*.fasta
+!data/processed/fasta/*.tsv
+!data/processed/alphapulldown/
+!data/processed/alphapulldown/*.csv
+!data/processed/alphapulldown/*.txt
+!data/processed/alphapulldown/*.tsv
+!data/processed/benchmarks/
+!data/processed/benchmarks/*.json
+!data/processed/benchmarks/fasta/
+!data/processed/benchmarks/fasta/*.tsv
+!data/processed/benchmarks/alphapulldown_inputs/
+!data/processed/benchmarks/alphapulldown_inputs/*.tsv
+!data/processed/screens/
+!data/processed/screens/*.json
+!data/processed/screens/*.tsv
+!data/processed/provenance/
+!data/processed/provenance/*.json
+!data/processed/targets/
+!data/processed/targets/*.json
+!data/processed/targets/*.tsv
 data/raw/uniprot/**
 !data/raw/uniprot/.gitkeep
 data/raw/fasta/**

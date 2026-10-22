@@ -1,12 +1,9 @@
 # UniProt Target Verification Report
 
-Generated: 2026-07-02T08:07:23.022296+00:00
-
 ## Source
 
-- Database: UniProtKB REST API
+- Database: UniProtKB 
 - Release metadata: `{"Date": "Thu, 02 Jul 2026 08:05:01 GMT", "X-UniProt-Release": "2026_02", "X-UniProt-Release-Date": "10-June-2026", "queried_at_utc": "2026-07-02T08:05:01.438367+00:00", "url": "https://rest.uniprot.org/uniprotkb/search?query=*&size=0&format=json"}`
-- Query policy: reviewed Swiss-Prot human records, searched by curated gene symbol/alias.
 - Canonical sequences were downloaded from UniProt entries and summarized by SHA-256 checksum.
 
 ## Counts
@@ -88,5 +85,4 @@ Generated: 2026-07-02T08:07:23.022296+00:00
 ## Review Notes
 
 - `TTC30A` and `TTC30B` are both retained as human IFT70 paralogs pending screen-design review.
-- Large ODA heavy chains are retrieved full length here; future AlphaPulldown jobs may use domain-level constructs for tractability.
-- This report verifies database identity, not biological interaction evidence. Interaction evidence remains in the literature/validation docs.
+- Large ODA heavy chains are retrieved full length here; future AlphaPulldown jobs may use domain-level constructs.

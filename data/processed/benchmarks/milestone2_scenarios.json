@@ -1,0 +1,152 @@
+{
+  "benchmark_id": "milestone2_alphapulldown_validation",
+  "description": "Closed Milestone 2 benchmark scenario set for AlphaPulldown validation. This manifest is intentionally independent of the 62-target universe manifest and must not fall back to it.",
+  "target_universe_fallback": "prohibited",
+  "scenario_count": 9,
+  "excluded_scenario_ids": [
+    "human_dnaaf9_ift74",
+    "human_dnaaf9_ift81",
+    "ift74_ift81",
+    "human_dnaaf18_ift46_ift74_ift81"
+  ],
+  "scenarios": [
+    {
+      "scenario_id": "chlamy_dnaaf18_ift46_positive",
+      "label": "Chlamydomonas ODA16/DNAAF18-IFT46 positive benchmark",
+      "category": "positive_control",
+      "species": "Chlamydomonas reinhardtii",
+      "target_record_ids": [],
+      "source_panel_record_ids": [
+        "GR_SET_001",
+        "EXT_CR_ODA16__CR_IFT46"
+      ],
+      "execution_status": "blocked_until_external_sequence_records_are_versioned",
+      "notes": "Existing versioned project records describe this external positive benchmark, but Chlamydomonas sequence target records are not versioned in this repository. Do not fall back to the human 62-target universe."
+    },
+    {
+      "scenario_id": "human_dnaaf18_ift46_negative",
+      "label": "Human DNAAF18/ODA16-IFT46 negative/species-divergence benchmark",
+      "category": "negative_control",
+      "species": "Homo sapiens",
+      "target_record_ids": [
+        "HUMAN_DNAAF18",
+        "HUMAN_IFT46"
+      ],
+      "source_panel_record_ids": [
+        "GR_SET_002"
+      ],
+      "execution_status": "ready_from_versioned_records"
+    },
+    {
+      "scenario_id": "human_dnaaf9_ift74_ift81_known",
+      "label": "Human DNAAF9 with IFT74/IFT81 known association benchmark",
+      "category": "known_association",
+      "species": "Homo sapiens",
+      "target_record_ids": [
+        "HUMAN_DNAAF9",
+        "HUMAN_IFT74",
+        "HUMAN_IFT81"
+      ],
+      "source_panel_record_ids": [
+        "GR_SET_003"
+      ],
+      "execution_status": "ready_from_versioned_records"
+    },
+    {
+      "scenario_id": "human_dnaaf9_ift46_ift74_ift81_exploratory",
+      "label": "Human DNAAF9 with IFT46/IFT74/IFT81 exploratory context",
+      "category": "exploratory",
+      "species": "Homo sapiens",
+      "target_record_ids": [
+        "HUMAN_DNAAF9",
+        "HUMAN_IFT46",
+        "HUMAN_IFT74",
+        "HUMAN_IFT81"
+      ],
+      "source_panel_record_ids": [
+        "GR_SET_004"
+      ],
+      "execution_status": "ready_from_versioned_records"
+    },
+    {
+      "scenario_id": "human_dnaaf9_ift80_ift172_exploratory",
+      "label": "Human DNAAF9 with IFT80/IFT172 exploratory context",
+      "category": "exploratory",
+      "species": "Homo sapiens",
+      "target_record_ids": [
+        "HUMAN_DNAAF9",
+        "HUMAN_IFT80",
+        "HUMAN_IFT172"
+      ],
+      "source_panel_record_ids": [
+        "GR_SET_005"
+      ],
+      "execution_status": "ready_from_versioned_records"
+    },
+    {
+      "scenario_id": "human_dnai1_ift46_ift74_ift81_exploratory",
+      "label": "Human DNAI1 with IFT46/IFT74/IFT81 exploratory context",
+      "category": "exploratory",
+      "species": "Homo sapiens",
+      "target_record_ids": [
+        "HUMAN_DNAI1",
+        "HUMAN_IFT46",
+        "HUMAN_IFT74",
+        "HUMAN_IFT81"
+      ],
+      "source_panel_record_ids": [
+        "GR_SET_006"
+      ],
+      "execution_status": "ready_from_versioned_records"
+    },
+    {
+      "scenario_id": "human_dnai2_ift46_ift74_ift81_exploratory",
+      "label": "Human DNAI2 with IFT46/IFT74/IFT81 exploratory context",
+      "category": "exploratory",
+      "species": "Homo sapiens",
+      "target_record_ids": [
+        "HUMAN_DNAI2",
+        "HUMAN_IFT46",
+        "HUMAN_IFT74",
+        "HUMAN_IFT81"
+      ],
+      "source_panel_record_ids": [
+        "GR_SET_007"
+      ],
+      "execution_status": "ready_from_versioned_records"
+    },
+    {
+      "scenario_id": "human_dnai1_dnai2_ift46_ift74_ift81_exploratory",
+      "label": "Human DNAI1/DNAI2 with IFT46/IFT74/IFT81 exploratory context",
+      "category": "exploratory",
+      "species": "Homo sapiens",
+      "target_record_ids": [
+        "HUMAN_DNAI1",
+        "HUMAN_DNAI2",
+        "HUMAN_IFT46",
+        "HUMAN_IFT74",
+        "HUMAN_IFT81"
+      ],
+      "source_panel_record_ids": [
+        "GR_SET_008"
+      ],
+      "execution_status": "ready_from_versioned_records"
+    },
+    {
+      "scenario_id": "human_dnai1_dnai2_ift80_ift172_exploratory",
+      "label": "Human DNAI1/DNAI2 with IFT80/IFT172 exploratory context",
+      "category": "exploratory",
+      "species": "Homo sapiens",
+      "target_record_ids": [
+        "HUMAN_DNAI1",
+        "HUMAN_DNAI2",
+        "HUMAN_IFT80",
+        "HUMAN_IFT172"
+      ],
+      "source_panel_record_ids": [
+        "GR_SET_009"
+      ],
+      "execution_status": "ready_from_versioned_records"
+    }
+  ]
+}
