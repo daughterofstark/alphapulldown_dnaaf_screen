@@ -46,7 +46,7 @@ load_remote_env "${REMOTE_ENV_FILE}"
 require_linux
 if [[ "${CONTAINER_RUNTIME:-apptainer}" == "docker-native" ]]; then
   echo "run_feature_generation.sh is the historical Snakemake/Apptainer path." >&2
-  echo "For RunPod Docker-native execution use:" >&2
+  echo "For Docker-native execution use:" >&2
   echo "  bash scripts/remote/run_native_stage.sh --stage features" >&2
   exit 2
 fi

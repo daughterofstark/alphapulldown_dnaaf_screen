@@ -1,87 +1,95 @@
 # AlphaPulldown DNAAF-ODA-IFT Screen
 
-Research-grade planning repository for a reproducible AlphaPulldown pipeline to screen candidate protein-protein interactions among mammalian DNAAFs, Outer Dynein Arm proteins, and Intraflagellar Transport proteins.
+This repository contains the reproducible computational framework and pilot
+results for a structural-biology study of candidate interactions among
+mammalian dynein axonemal assembly factors (DNAAFs), outer dynein-arm (ODA)
+proteins, and intraflagellar-transport (IFT) proteins.
 
-## Motivation
+The project uses AlphaPulldown with AlphaFold2-Multimer to generate structural
+hypotheses. Predictions are not treated as evidence of direct binding without
+confidence assessment, biological context, and experimental follow-up.
 
-Axonemal dynein arms are assembled in the cytoplasm by DNAAFs and delivered into motile cilia by IFT trains. Many PCD-associated genes are involved in this pathway, but most direct DNAAF-ODA and DNAAF-IFT interfaces remain unmapped. This project will develop a transparent computational workflow for generating structural hypotheses that can later be tested experimentally.
+## Current Status
 
-This repository is currently in the architecture and planning phase. It does not yet implement the scientific pipeline.
+The completed Milestone 2 pilot established a Docker-native AWS execution
+path, generated reusable MMseqs2 features for nine human proteins, and
+produced four complete AlphaPulldown prediction output sets.
 
-The current implemented layer is CPU-side preparation only. It validates verified UniProt targets, writes deterministic FASTA files, builds AlphaPulldown-compatible input files, and records provenance. AlphaPulldown inference is intentionally deferred to a Linux host with NVIDIA CUDA.
+| Scenario | Status | Best ipTM |
+| --- | --- | ---: |
+| Human DNAAF18 + IFT46 comparator | Complete | 0.168 |
+| Human DNAAF9 + IFT74 + IFT81 known-association benchmark | Complete | 0.369 |
+| Human DNAI1 + IFT46 + IFT74 + IFT81 exploratory assembly | Complete | 0.280 |
+| Human DNAI2 + IFT46 + IFT74 + IFT81 exploratory assembly | Complete | 0.335 |
 
-## Planned Features
+The known-association benchmark scored above the DNAAF18-IFT46 comparator, but
+all completed models had high global inter-chain PAE. The pilot therefore
+validates the computational workflow and provides structural hypotheses; it
+does not establish a confident direct interface for the exploratory assemblies.
 
-- Curated target manifests for all 19 mammalian DNAAFs, ODA proteins, ODAD proteins, and IFT proteins.
-- Scripted UniProt retrieval and validation.
-- Reproducible FASTA generation.
-- AlphaPulldown-compatible pair generation.
-- CPU-side preparation CLI for target validation, FASTA generation, screen definitions, and AlphaPulldown input files.
-- Positive and negative control validation.
-- AlphaFold-Multimer prediction orchestration.
-- Score extraction for ipTM, pTM, ranking confidence, pLDDT, and PAE.
-- Interface analysis including residues, buried surface area, hydrogen bonds, and salt bridges.
-- Conservation, disease-variant, and literature annotation.
-- Publication-ready reports and figures.
+Read the full report in [Milestone 2 Pilot Results](docs/validation/MILESTONE2_PILOT_RESULTS.md).
 
-## Installation
+## Repository Contents
 
-Implementation has not started. A future installation will likely use:
+```text
+config/       versioned configuration templates and benchmark definitions
+data/         validated target metadata, FASTA manifests, and screen inputs
+deployment/   Docker image definition and AWS runtime checks
+docs/         active methods, design, deployment, and validation documents
+scripts/      reproducible preparation, execution, and result-summary commands
+src/          Python package for target validation and runtime orchestration
+tests/        offline regression tests
+```
+
+Generated outputs, databases, credentials, and machine-specific configuration
+are intentionally excluded from Git.
+
+## Reproduce the Pilot Summary
+
+The raw AWS output archive is distributed separately from this repository.
+After extracting it, summarize complete prediction directories with:
+
+```bash
+PYTHONPATH=src python3 scripts/summarize_milestone2_results.py \
+  --results-root /path/to/predictions \
+  --output pilot_summary.json
+```
+
+The command rejects incomplete output directories. See
+[AWS Image Build Guide](docs/deployment/AWS_IMAGE_BUILD_GUIDE.md) for the
+validated runtime record and [Milestone 2 Benchmark Scenarios](docs/validation/MILESTONE2_BENCHMARK_SCENARIOS.md)
+for the benchmark boundary.
+
+## Development
 
 ```bash
 python -m venv .venv
 source .venv/bin/activate
 pip install -e ".[dev]"
-pre-commit install
+PYTHONPATH=src python -m unittest discover -s tests -v
 ```
 
-AlphaPulldown, AlphaFold databases, CUDA, and GPU environment setup will be documented before prediction workflows are implemented.
+The project package requires Python 3.11 or later. The pinned AlphaPulldown
+2.5.0 AlphaFold2 runtime uses Python 3.10 inside its Docker image; the two
+environments are kept separate deliberately.
 
-CPU-side preparation commands:
+## Scientific Scope
 
-```bash
-PYTHONPATH=src python -m alphapulldown_dnaaf_screen.cli validate-targets
-PYTHONPATH=src python -m alphapulldown_dnaaf_screen.cli write-fastas
-PYTHONPATH=src python -m alphapulldown_dnaaf_screen.cli build-screens
-PYTHONPATH=src python -m alphapulldown_dnaaf_screen.cli prepare-alphapulldown
-```
+The current pilot is a closed benchmark. It is isolated from the larger
+62-target universe and does not substitute unversioned Chlamydomonas records
+with human targets. Larger assemblies remain deferred until an appropriate
+host-RAM plan and a supervised review of the completed structures and PAE plots.
 
-AWS candidate-image build documentation:
+## Documentation
 
-See [docs/deployment/AWS_IMAGE_BUILD_GUIDE.md](docs/deployment/AWS_IMAGE_BUILD_GUIDE.md).
-The candidate image must pass CPU and GPU no-data smoke tests before any
-feature generation or prediction work.
+- [Project context](PROJECT_CONTEXT.md)
+- [Roadmap](ROADMAP.md)
+- [Benchmark design](docs/validation/CONTROL_BENCHMARK_DESIGN.md)
+- [Pilot results](docs/validation/MILESTONE2_PILOT_RESULTS.md)
+- [Deployment requirements](docs/deployment/REMOTE_ACCESS_REQUIREMENTS.md)
+- [Documentation index](docs/README.md)
 
-## Directory Structure
+## License and Citation
 
-```text
-docs/                  project documentation, design notes, protocols
-data/raw/              immutable downloaded records
-data/processed/        generated validated metadata and FASTA files
-data/benchmark/        controls and benchmark datasets
-data/manifest/         curated target manifests
-config/                pipeline configuration
-workflows/             future Snakemake/Nextflow/GitHub workflow assets
-scripts/               future command-line utilities
-src/                   Python package source
-notebooks/             exploratory analyses
-results/               generated outputs, ignored by Git
-tests/                 automated tests
-environment/           environment and container specifications
-```
-
-## Roadmap
-
-See [ROADMAP.md](ROADMAP.md) for milestones. The immediate local priority is CPU-side preparation and AlphaPulldown input characterization; AlphaPulldown installation, inference, and official-example execution are deferred to a Linux GPU environment.
-
-## Scientific Status
-
-Computational predictions from this project will be treated as hypotheses. Candidate interactions must be evaluated using multiple evidence types, including AlphaFold confidence metrics, PAE, interface geometry, conservation, literature context, and future wet-lab validation.
-
-## Citation
-
-Citation metadata is provided in [CITATION.cff](CITATION.cff) with placeholder project details. Update it before public release.
-
-## License
-
-No final open-source license has been chosen yet. See [LICENSE](LICENSE) for the current placeholder. Choose a license before public distribution.
+The repository currently has a license placeholder. Update [LICENSE](LICENSE)
+and [CITATION.cff](CITATION.cff) before public release.

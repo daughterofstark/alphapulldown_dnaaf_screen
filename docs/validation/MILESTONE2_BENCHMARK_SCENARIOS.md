@@ -1,6 +1,6 @@
 # Milestone 2 Benchmark Scenarios
 
-This document records the closed Milestone 2 benchmark scenario set used for offline configuration and future AlphaPulldown validation.
+This document records the closed Milestone 2 benchmark scenario set used for AlphaPulldown validation.
 
 No biological sequences were retrieved, validated, modified, or generated for this benchmark definition. The 62-target universe manifests remain untouched and are not fallback sources for this benchmark.
 
@@ -10,10 +10,10 @@ No biological sequences were retrieved, validated, modified, or generated for th
 - Benchmark FASTA manifest: `data/processed/benchmarks/fasta/fasta_manifest.tsv`
 - Benchmark AlphaPulldown input sheet: `data/processed/benchmarks/alphapulldown_inputs/milestone2_sample_sheet.tsv`
 - Example config: `config/benchmarks/milestone2_benchmark.example.yaml`
-- Remote env template: `config/benchmarks/milestone2_remote.example.env`
+- AWS runtime template: `config/benchmarks/milestone2_aws.example.env`
 - Input directory: `data/processed/benchmarks/alphapulldown_inputs`
-- Future output directory placeholder: `results/milestone2_benchmark`
-- Future provenance directory placeholder: `results/provenance/milestone2_benchmark`
+- Output directory: `results/milestone2_benchmark`
+- Provenance directory: `results/provenance/milestone2_benchmark`
 
 The benchmark FASTA manifest is intentionally independent from
 `data/processed/fasta/fasta_manifest.tsv`. It references the existing versioned
@@ -32,7 +32,7 @@ the benchmark manifest and benchmark AlphaPulldown inputs.
 - `human_dnai1_dnai2_ift46_ift74_ift81_exploratory`
 - `human_dnai1_dnai2_ift80_ift172_exploratory`
 
-The Chlamydomonas positive benchmark is retained as a scenario because the project already contains versioned internal benchmark records for it. It is marked `blocked_until_external_sequence_records_are_versioned` because no Chlamydomonas sequence target records are versioned in this repository. It must not fall back to human targets.
+The Chlamydomonas positive benchmark is retained as a design reference. It is marked `blocked_until_external_sequence_records_are_versioned` because no Chlamydomonas sequence target records are versioned in this repository. It must not fall back to human targets.
 
 The eight human scenarios are runnable from existing versioned records:
 
@@ -54,38 +54,25 @@ These scenario IDs are prohibited:
 - `ift74_ift81`
 - `human_dnaaf18_ift46_ift74_ift81`
 
-## Future CPU Commands
+## Reproduction Commands
 
-The commands below are for the future remote CPU feature-generation session. Do
-not run them as part of offline repository review.
+The following commands document the validated AWS workflow. They require the
+versioned Docker image, AlphaFold parameters, and an appropriately provisioned
+Linux host; they are not intended for local macOS execution.
 
 ```bash
-cp config/benchmarks/milestone2_remote.example.env config/remote/paths.env
-sed -n '1,220p' config/remote/paths.env
+bash scripts/aws/configure_milestone2_runtime.sh
+bash scripts/aws/run_milestone2_stage.sh --stage features --dry-run
+bash scripts/aws/run_milestone2_stage.sh --stage features
 ```
 
 ```bash
-export PATH="/workspace/miniforge3/bin:$PATH"
-source /workspace/miniforge3/etc/profile.d/conda.sh
-conda activate snake
-cd /workspace/alphapulldown
-
-bash scripts/remote/bootstrap_remote_environment.sh --dry-run
-bash scripts/remote/validate_remote_environment.sh
-bash scripts/remote/run_feature_generation.sh --dry-run
+REMOTE_EXECUTION_STAGE="gpu" \
+  bash scripts/aws/run_milestone2_stage.sh \
+    --stage predict \
+    --scenario human_dnaaf18_ift46_negative \
+    --dry-run
 ```
 
-```bash
-PYTHONPATH=src python -m alphapulldown_dnaaf_screen.remote_cli \
-  --config config/remote/paths.env \
-  check-feature-coverage \
-  --screen milestone2 \
-  --json
-```
-
-After the Milestone 2 feature files exist, the future GPU pod should dry-run the
-benchmark prediction step before launching inference:
-
-```bash
-bash scripts/remote/run_prediction.sh --screen milestone2 --dry-run
-```
+The scoped AWS wrapper rejects the 62-target manifest, AlphaFold3 selectors,
+the blocked Chlamydomonas scenario, and unsupported analysis modes.

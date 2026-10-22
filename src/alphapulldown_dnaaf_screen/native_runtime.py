@@ -1,4 +1,4 @@
-"""Docker-native RunPod execution for the isolated Milestone 2 benchmark."""
+"""Docker-native execution for the isolated Milestone 2 benchmark."""
 
 from __future__ import annotations
 
@@ -100,7 +100,7 @@ class NativeRuntimeConfig:
             if key.startswith(APPTAINER_ENV_PREFIXES) and value.strip():
                 raise ValidationError(
                     f"{key} is incompatible with CONTAINER_RUNTIME={DOCKER_NATIVE_RUNTIME}; "
-                    "RunPod Docker-native execution must not use SIF or nested runtimes"
+                    "Docker-native execution must not use SIF or nested runtimes"
                 )
 
         stage = values.get("REMOTE_EXECUTION_STAGE", "")

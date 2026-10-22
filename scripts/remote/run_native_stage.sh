@@ -9,7 +9,7 @@ usage() {
   cat <<'USAGE'
 Usage: run_native_stage.sh --stage features|predict [--env-file PATH] [--dry-run]
 
-Runs one AlphaPulldown stage directly inside the Docker-native RunPod image.
+Runs one AlphaPulldown stage directly inside the Docker-native runtime image.
 It never launches Snakemake, Apptainer, Singularity, Docker, or another container.
 USAGE
 }

@@ -594,7 +594,7 @@ class RemoteHandoffTests(unittest.TestCase):
 
     def test_historical_execution_preflight_has_safe_host_remediation(self) -> None:
         common = Path("scripts/remote/common.sh").read_text(encoding="utf-8")
-        checklist = Path("docs/operations/RUNPOD_EXECUTION_CHECKLIST.md").read_text(
+        checklist = Path("docs/archive/runpod/RUNPOD_EXECUTION_CHECKLIST.md").read_text(
             encoding="utf-8"
         )
         self.assertIn('apptainer exec "${sif_path}" true', common)
@@ -661,7 +661,7 @@ class RemoteHandoffTests(unittest.TestCase):
         self.assertEqual(values["APPTAINER_PREDICTION_SIF"], "")
 
     def test_runpod_checklist_requires_tmux_and_native_stage_split(self) -> None:
-        text = Path("docs/operations/RUNPOD_EXECUTION_CHECKLIST.md").read_text(
+        text = Path("docs/archive/runpod/RUNPOD_EXECUTION_CHECKLIST.md").read_text(
             encoding="utf-8"
         )
         self.assertIn("tmux new -s alphapulldown-features", text)
@@ -678,7 +678,7 @@ class RemoteHandoffTests(unittest.TestCase):
         self.assertIn("features/*.pkl.xz", text)
 
     def test_runpod_checklist_retires_apptainer_for_runpod(self) -> None:
-        text = Path("docs/operations/RUNPOD_EXECUTION_CHECKLIST.md").read_text(
+        text = Path("docs/archive/runpod/RUNPOD_EXECUTION_CHECKLIST.md").read_text(
             encoding="utf-8"
         )
         self.assertIn('CONTAINER_RUNTIME="docker-native"', text)
