@@ -7,7 +7,7 @@ from pathlib import Path
 
 PANEL_TSV = Path("data/processed/screens/first_pass_interaction_panel.tsv")
 PANEL_JSON = Path("data/processed/screens/first_pass_interaction_panel.json")
-TARGETS_JSON = Path("data/processed/uniprot/targets_uniprot_verified.json")
+TARGETS_JSON = Path("data/processed/targets/validated_targets.json")
 
 ALLOWED_EVIDENCE_LEVELS = {
     "direct_structural",
