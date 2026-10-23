@@ -38,5 +38,4 @@ The primary model-level measures are:
   needed before a proposed interface is taken seriously.
 
 Scores were interpreted together with chain placement, PAE plots, biological
-context, and published evidence. No fixed score threshold is treated as proof
-of a physical interaction.
+context, and published evidence. 
