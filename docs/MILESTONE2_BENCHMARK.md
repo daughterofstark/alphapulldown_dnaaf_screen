@@ -26,7 +26,4 @@ back to the full target set.
 
 IFT74 and IFT81 were modelled together because they form an IFT-B subcomplex.
 The human DNAAF18 + IFT46 condition is a comparator for a reported
-species-dependent interaction; it is not a universal negative control.
-
-The following standalone conditions were deliberately excluded: DNAAF9 +
-IFT74, DNAAF9 + IFT81, IFT74 + IFT81, and DNAAF18 + IFT46 + IFT74 + IFT81.
+species-dependent interaction.
