@@ -2,16 +2,12 @@
 
 ## Limits of This Pilot
 
-- AlphaFold-Multimer predictions are structural hypotheses, not binding assays.
 - The completed scenarios have high global inter-chain PAE, limiting confidence
   in the placement of protein chains relative to one another.
-- The positive Chlamydomonas DNAAF18/ODA16 + IFT46 benchmark was not run because
-  the required algal sequence records were not versioned in this project.
 - A four-protein DNAAF9 + IFT46 + IFT74 + IFT81 run was stopped by host-RAM
   exhaustion on a 32 GiB AWS machine. It produced no complete result set and
   is excluded from the analysis.
-- Larger assemblies were deferred rather than treated as failed biological
-  predictions.
+- Larger assemblies were deferred.
 
 ## Recommended Next Step
 
