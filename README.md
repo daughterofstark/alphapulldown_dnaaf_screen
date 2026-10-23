@@ -83,8 +83,3 @@ host-RAM plan and a supervised review of the completed structures and PAE plots.
 
 The concise scientific record is in [docs/](docs/README.md): project overview,
 methods, benchmark design, results, limitations, and references.
-
-## License and Citation
-
-The repository currently has a license placeholder. Update [LICENSE](LICENSE)
-and [CITATION.cff](CITATION.cff) before public release.
