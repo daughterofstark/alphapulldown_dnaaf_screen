@@ -1,18 +1,16 @@
-# Documentation Index
+# Project Documentation
 
-## Current Documents
+This folder contains the concise record for the completed AlphaPulldown pilot.
+It is intended for scientific review rather than as a record of day-to-day
+development.
 
-- [Deployment requirements](deployment/REMOTE_ACCESS_REQUIREMENTS.md)
-- [AWS runtime and image build record](deployment/AWS_IMAGE_BUILD_GUIDE.md)
-- [Milestone 2 benchmark rationale](design/MILESTONE2_BENCHMARK_RATIONALE.md)
-- [Heavy-chain construct policy](design/HEAVY_CHAIN_CONSTRUCT_POLICY.md)
-- [Control benchmark design](validation/CONTROL_BENCHMARK_DESIGN.md)
-- [Milestone 2 scenario manifest](validation/MILESTONE2_BENCHMARK_SCENARIOS.md)
-- [Milestone 2 pilot results](validation/MILESTONE2_PILOT_RESULTS.md)
-- [ODA/IFT interaction evidence audit](validation/EVIDENCE_AUDIT_ODA_IFT_INTERACTIONS.md)
+1. [Project overview](PROJECT_OVERVIEW.md) - question, scope, and current status.
+2. [Methods](METHODS.md) - input curation, feature generation, prediction, and analysis.
+3. [Milestone 2 benchmark](MILESTONE2_BENCHMARK.md) - the fixed benchmark and its boundaries.
+4. [Pilot results](MILESTONE2_PILOT_RESULTS.md) - completed predictions and cautious interpretation.
+5. [Limitations and next steps](LIMITATIONS_AND_NEXT_STEPS.md) - what the pilot does and does not establish.
+6. [References](REFERENCES.md) - key biological and software sources.
 
-## Historical Material
-
-Earlier RunPod and Snakemake/Apptainer investigations are retained in
-[`docs/archive/`](archive/README.md). They document decisions and failures that
-led to the AWS Docker-native runtime; they are not current execution guidance.
+Generated outputs, credentials, cloud configuration, and full prediction files
+are deliberately not stored in Git. The raw result archive is distributed
+separately with its SHA-256 checksum.

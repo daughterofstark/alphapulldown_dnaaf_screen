@@ -14,6 +14,5 @@ The format is based on Keep a Changelog and follows semantic versioning.
 
 ### Changed
 
-- Reorganised historical RunPod and Snakemake materials under `docs/archive/`.
-- Rewrote active deployment and project documentation to reflect the completed pilot.
+- Consolidated the public documentation into a concise project record.
 

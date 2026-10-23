@@ -27,7 +27,7 @@ all completed models had high global inter-chain PAE. The pilot therefore
 validates the computational workflow and provides structural hypotheses; it
 does not establish a confident direct interface for the exploratory assemblies.
 
-Read the full report in [Milestone 2 Pilot Results](docs/validation/MILESTONE2_PILOT_RESULTS.md).
+Read the full report in [Milestone 2 Pilot Results](docs/MILESTONE2_PILOT_RESULTS.md).
 
 ## Repository Contents
 
@@ -55,10 +55,9 @@ PYTHONPATH=src python3 scripts/summarize_milestone2_results.py \
   --output pilot_summary.json
 ```
 
-The command rejects incomplete output directories. See
-[AWS Image Build Guide](docs/deployment/AWS_IMAGE_BUILD_GUIDE.md) for the
-validated runtime record and [Milestone 2 Benchmark Scenarios](docs/validation/MILESTONE2_BENCHMARK_SCENARIOS.md)
-for the benchmark boundary.
+The command rejects incomplete output directories. The benchmark boundary and
+completed outputs are described in [Milestone 2 Benchmark](docs/MILESTONE2_BENCHMARK.md)
+and [Milestone 2 Pilot Results](docs/MILESTONE2_PILOT_RESULTS.md).
 
 ## Development
 
@@ -82,12 +81,8 @@ host-RAM plan and a supervised review of the completed structures and PAE plots.
 
 ## Documentation
 
-- [Project context](PROJECT_CONTEXT.md)
-- [Roadmap](ROADMAP.md)
-- [Benchmark design](docs/validation/CONTROL_BENCHMARK_DESIGN.md)
-- [Pilot results](docs/validation/MILESTONE2_PILOT_RESULTS.md)
-- [Deployment requirements](docs/deployment/REMOTE_ACCESS_REQUIREMENTS.md)
-- [Documentation index](docs/README.md)
+The concise scientific record is in [docs/](docs/README.md): project overview,
+methods, benchmark design, results, limitations, and references.
 
 ## License and Citation
 

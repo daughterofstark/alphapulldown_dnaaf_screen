@@ -596,18 +596,6 @@ class RemoteHandoffTests(unittest.TestCase):
         self.assertIn('fail "Apptainer"', validator)
         self.assertIn('apptainer exec "${APPTAINER_PREDICTION_SIF}" true', validator)
 
-    def test_historical_execution_preflight_has_safe_host_remediation(self) -> None:
-        common = Path("scripts/remote/common.sh").read_text(encoding="utf-8")
-        checklist = Path("docs/archive/runpod/RUNPOD_EXECUTION_CHECKLIST.md").read_text(
-            encoding="utf-8"
-        )
-        self.assertIn('apptainer exec "${sif_path}" true', common)
-        self.assertIn("Apptainer SUID helper package", common)
-        self.assertIn("Do not change host sysctl settings", common)
-        self.assertIn("Historical Apptainer artifacts", checklist)
-        self.assertIn("not RunPod execution inputs", checklist)
-        self.assertNotIn("unprivileged_userns_clone=1", common)
-
     def test_apptainer_prep_detects_filesystem_types(self) -> None:
         text = Path("scripts/remote/prepare_apptainer_image.sh").read_text(encoding="utf-8")
         self.assertIn("findmnt -T", text)
@@ -663,29 +651,6 @@ class RemoteHandoffTests(unittest.TestCase):
         self.assertEqual(values["APPTAINER_MIN_LOCAL_FREE_GB"], "28")
         self.assertIn("kosinskilab/alphafold2:2.5.0", values["APPTAINER_PREDICTION_IMAGE"])
         self.assertEqual(values["APPTAINER_PREDICTION_SIF"], "")
-
-    def test_runpod_checklist_requires_tmux_and_native_stage_split(self) -> None:
-        text = Path("docs/archive/runpod/RUNPOD_EXECUTION_CHECKLIST.md").read_text(encoding="utf-8")
-        self.assertIn("tmux new -s alphapulldown-features", text)
-        self.assertIn("tmux new -s alphapulldown-predict", text)
-        self.assertIn("run_native_stage.sh", text)
-        self.assertLess(
-            text.index("## Phase A - Build and publish the derived image"),
-            text.index("## Phase B - CPU MMseqs2 feature generation"),
-        )
-        self.assertLess(
-            text.index("## Phase B - CPU MMseqs2 feature generation"),
-            text.index("## Phase C - A40 inference"),
-        )
-        self.assertIn("features/*.pkl.xz", text)
-
-    def test_runpod_checklist_retires_apptainer_for_runpod(self) -> None:
-        text = Path("docs/archive/runpod/RUNPOD_EXECUTION_CHECKLIST.md").read_text(encoding="utf-8")
-        self.assertIn('CONTAINER_RUNTIME="docker-native"', text)
-        self.assertIn('REMOTE_EXECUTION_STAGE="cpu"', text)
-        self.assertIn('REMOTE_EXECUTION_STAGE="gpu"', text)
-        self.assertIn("do not execute SIF files", text)
-        self.assertIn("Do not delete the completed SIF", text)
 
 
 def top_level_keys(path: Path) -> set[str]:
